@@ -21,13 +21,14 @@ estafeta(merdas, 0, 0).
 estafeta(burro, 5, 4.3).
 
 
+% estados: 1->registada, 2->em distribuição, 3->entregue
+% , DataInicio, DataFim, Avaliacao
 
-
-
-% ----------- encomenda(id, idCliente, peso, volume, freguesia, morada, prazo)
+% ----------- encomenda(estado, id, idCliente, idEstafeta, peso, volume, freguesia, morada, prazo)
 % ----------- estafeta(id, nrEntregas, avaliacao)
 % ----------- cliente(id, nrEncomendas)
-% ----------- entrega(idEncomenda, idEstafeta veiculo, DataInicio, DataFim, avaliacao)
+% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao)
+
 
 ajuda(geral, "escrever todos os comandos de ajuda aqui").
 % mudar esta parte
@@ -50,14 +51,39 @@ createCliente(Id) :- \+cliente(Id, _), dynamic(cliente/2), assert(cliente(Id, 0)
 
 
                 %fazer os teste de id da encomenda e assim antes, esxiste id cliente, estafeta e assim
-createEncomenda(Id, IdCliente, IdEstafeta, Peso, Volume, Freguesia, 
-                Morada, Prazo, DataInicio, DataFim, Avaliacao) :- 
-                    encomenda(Id, _, _, _, _, _, _, _, _, _ ), write("Encomenda já existente"), !;
-                    \+encomenda(_, IdCliente, _, _, _, _, _, _, _, _ ), write("Cliente não existente"), !;
-                    \+encomenda(_, _, IdEstafeta, _, _, _, _, _, _, _ ), write("Estafeta não existente"), !;
+createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, 
+                Morada, Prazo) :- 
+                    encomenda(_, Id, _, _, _, _, _, _, _, _, _ ), write("Encomenda já existente"), !; % verificar nr argumentos
+                    \+encomenda(_, _, IdCliente, _, _, _, _, _, _, _, _ ), write("Cliente não existente"), !; % verificar nr argumentos
+                    \+encomenda(_, _, _, IdEstafeta, _, _, _, _, _, _, _ ), write("Estafeta não existente"), !; % verificar nr argumentos
+                    dynamic(encomenda/9), assert(encomenda(registada, Id, IdCliente, empty, Peso, Volume, Freguesia, Morada, Prazo)).
 
-        assert(encomenda(Id, IdCliente, IdEstafeta, Peso, Volume, Freguesia, 
-                            Morada, Prazo, DataInicio, DataFim, Avaliacao)).
+createEntrega(IdEncomenda, IdEstafeta, Veiculo, Inicio, Prazo) :-
+                \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write(Encomenda não existente), !;
+                \+encomenda(_, _, _, IdEstafeta, _, _, _, _, _), write(Estafeta não existente), !;
+                encomenda(entregue, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já foi entregue"), !;
+                encomenda(distribuicao, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já se encontra em distribuição"), !;
+                veiculo(Veiculo, _, Max), Max < Peso, write("Veículo selecionado não suporta carga da encomenda"), !;
+
+                replace_existing_fact(encomenda(_, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo), 
+                                    encomenda(registada, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo)), 
+                        dynamic(entrega/6), assert(entrega(IdEncomenda, IdEstafeta, Veiculo, Inicio, empty, -1 )), 
+                        write("Entrega registada").
+
+
+entregarEncomenda(IdEncomenda, DataFim, Avaliacao) :-
+                    \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write(Encomenda não existente), !;
+                    encomenda(entregue, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já foi entregue"), !;
+                    encomenda(registada, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda ainda não está em distribuição"), !;
+
+                    replace_existing_fact(encomenda(_, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo), 
+                                        encomenda(entregue, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo)), 
+                    replace_existing_fact(entrega(IdEncomenda, IdEstafeta, Veiculo, Volume, DataInicio, _, Avaliacao), 
+                                        entrega(IdEncomenda, IdEstafeta, Veiculo, Volume, DataInicio, DataFim, Avaliacao)), 
+                    replace_existing_fact(estafeta(IdEstafeta, EncomendasAnt, Rating), estafeta(IdEstafeta, EncomendasAnt + 1, Rating)). %alterar Rating, ver penalização
+                    
+
+
 
 
 
