@@ -18,7 +18,7 @@ cliente(daniel, 0).
 cliente(abacao, 3).
 
 estafeta(joao, 0, 0).
-estafeta(caldas, 5, 4.3).
+estafeta(caldas, 5, 4.3). 
 
 encomenda(entregue, cadeira_gayming, abacao, caldas, 1, 10, landim, rua_ponte, "3 dias").
 entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.4).
