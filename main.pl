@@ -14,20 +14,23 @@ veiculo(bicicleta, 10, 5).
 veiculo(mota, 35, 20).
 veiculo(carro, 25, 100). 
 
-cliente(mauricio, 0).
-cliente(sebastiao, 3).
+cliente(daniel, 0).
+cliente(abacao, 3).
 
-estafeta(merdas, 0, 0).
-estafeta(burro, 5, 4.3).
+estafeta(joao, 0, 0).
+estafeta(caldas, 5, 4.3).
+
+encomenda(entregue, cadeira_gayming, abacao, caldas, 1, 10, landim, rua_ponte, "3 dias").
+entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.4).
 
 
-% estados: 1->registada, 2->em distribuição, 3->entregue
-% , DataInicio, DataFim, Avaliacao
+% estados: 1->registada, 2->distribuição, 3->entregue
+% prazos de entrega (imediato, 2h, 6h, 1 dia, etc).
 
-% ----------- encomenda(estado, id, idCliente, idEstafeta, peso, volume, freguesia, morada, prazo)
-% ----------- estafeta(id, nrEntregas, avaliacao)
-% ----------- cliente(id, nrEncomendas)
-% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao)
+% ----------- encomenda(estado, id, idCliente, idEstafeta, peso, volume, freguesia, morada, prazo) /9
+% ----------- estafeta(id, nrEntregas, avaliacao) /3
+% ----------- cliente(id, nrEncomendas) /2
+% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
 
 
 ajuda(geral, "escrever todos os comandos de ajuda aqui").
@@ -41,8 +44,8 @@ help(X) :- ajuda(X, Y), write(Y). % tentar tirar o true que aparece depois
 
 
 
-createEstafeta(Id) :- \+estafeta(Id, _, _), dynamic(estafeta/3), assert(estafeta(Id, 0, 0)) write("Estafeta adicionado"), !;
-                        write("Estafeta já existente")
+createEstafeta(Id) :- \+estafeta(Id, _, _), dynamic(estafeta/3), assert(estafeta(Id, 0, 0)),  write("Estafeta adicionado"), !;
+                        write("Estafeta já existente").
 
 
 createCliente(Id) :- \+cliente(Id, _), dynamic(cliente/2), assert(cliente(Id, 0)), write("Cliente adicionado"), !;
@@ -51,19 +54,28 @@ createCliente(Id) :- \+cliente(Id, _), dynamic(cliente/2), assert(cliente(Id, 0)
 
 
                 %fazer os teste de id da encomenda e assim antes, esxiste id cliente, estafeta e assim
-createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, 
-                Morada, Prazo) :- 
-                    encomenda(_, Id, _, _, _, _, _, _, _, _, _ ), write("Encomenda já existente"), !; % verificar nr argumentos
-                    \+encomenda(_, _, IdCliente, _, _, _, _, _, _, _, _ ), write("Cliente não existente"), !; % verificar nr argumentos
-                    \+encomenda(_, _, _, IdEstafeta, _, _, _, _, _, _, _ ), write("Estafeta não existente"), !; % verificar nr argumentos
+createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Prazo) :- 
+                    encomenda(_, Id, _, _, _, _, _, _, _ ), write("Encomenda já existente"), !;
+                    \+cliente(IdCliente, _), write("Cliente não existente"), !;
+                    Peso > 100, write("Nenhum veiculo suporta a entrega da encomenda"), !; 
                     dynamic(encomenda/9), assert(encomenda(registada, Id, IdCliente, empty, Peso, Volume, Freguesia, Morada, Prazo)).
 
+trackEncomenda(Id) :- \+encomenda(_, Id, _, _, _, _, _, _, _), write("Encomenda não existente"), !;
+                        encomenda(entregue, Id, _, _, _, _, _, _, _), write("A encomenda já foi entregue"), !;
+                        encomenda(registada, Id, _, _, _, _, _, _, _), write("A encomenda está registada, dentro de momentos irá ser distribuída"), !;
+                        encomenda(distribuicao, Id, _, _, _, _, _, _, _), write("A encomenda encontra-se em distribuição").
+
+
+
+% só deve ser feita pelo sistema da empresa, é preciso certificar outra vez os campos??
 createEntrega(IdEncomenda, IdEstafeta, Veiculo, Inicio, Prazo) :-
-                \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write(Encomenda não existente), !;
-                \+encomenda(_, _, _, IdEstafeta, _, _, _, _, _), write(Estafeta não existente), !;
+                \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write("Encomenda não existente"), !;
+                \+estafeta(IdEstafeta, _, _), write("Estafeta não existente"), !;
                 encomenda(entregue, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já foi entregue"), !;
                 encomenda(distribuicao, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já se encontra em distribuição"), !;
-                veiculo(Veiculo, _, Max), Max < Peso, write("Veículo selecionado não suporta carga da encomenda"), !;
+                
+                encomenda(_, IdEncomenda, _, _, Peso, _, _, _, _ ), veiculo(Veiculo, _, Max), 
+                            Max < Peso, write("Veículo selecionado não suporta carga da encomenda"), !;
 
                 replace_existing_fact(encomenda(_, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo), 
                                     encomenda(registada, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo)), 
@@ -72,7 +84,7 @@ createEntrega(IdEncomenda, IdEstafeta, Veiculo, Inicio, Prazo) :-
 
 
 entregarEncomenda(IdEncomenda, DataFim, Avaliacao) :-
-                    \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write(Encomenda não existente), !;
+                    \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write("Encomenda não existente"), !;
                     encomenda(entregue, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já foi entregue"), !;
                     encomenda(registada, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda ainda não está em distribuição"), !;
 
