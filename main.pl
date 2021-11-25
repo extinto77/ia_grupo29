@@ -101,7 +101,37 @@ entregarEncomenda(IdEncomenda, DataFim, Avaliacao) :-
 
 
 
+calculaPreco(). % fazer
 
+
+
+
+
+% ---------------------------------------
+findEstafetasPorVeiculo(Veiculo, Bag) :-
+                        setof(IdEstafeta, entrega(_, IdEstafeta, Veiculo, _, _, _), Bag). % Bag possui lista de estafetas que usaram o veiculo em analise
+
+estafetaQuatasVezesVeiculo(Veiculo, Estafeta, Nr):-
+                        findall(1, entrega(_, Estafeta, Veiculo, _, _, _), Bag), length(Bag, Nr).  % DUVIDA : é assim que se encontra todos??
+
+calcularEstafetaQueMaisUsouVeiculo(_, [], _, Answer).
+calcularEstafetaQueMaisUsouVeiculo(Veiculo, [BagHead | Tail], Max, Answer) :-
+                        estafetaQuatasVezesVeiculo(Veiculo, BagHead, Nr), 
+                        Nr>Max, calcularEstafetaQueMaisUsouVeiculo(Veiculo, Tail, Nr, BagHead). % se for por percentagem alterar aqui a comparação
+calcularEstafetaQueMaisUsouVeiculo(Veiculo, [BagHead | Tail], Max, Answer) :-
+                        calcularEstafetaQueMaisUsouVeiculo(Veiculo, Tail, Max, Answer).
+        
+maisEcologico(Veiculo, Answer) :-% se for só bicicleta cagar no 'Veiculo'
+            findEstafetasPorVeiculo(Veiculo, Bag), calcularEstafetaQueMaisUsouVeiculo(Veiculo, Bag, 0, Answer).
+% ---------------------------------------
+
+
+
+
+
+
+
+% write($X).
 
 
 
