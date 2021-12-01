@@ -1,19 +1,11 @@
 :- op( 900,xfy,'::' ).
 
-:- dynamic(veiculo/3).
+%:- dynamic(veiculo/3).
 :- dynamic(estafeta/3).
 :- dynamic(cliente/2).
 :- dynamic(encomenda/9).
 :- dynamic(entrega/6).
 
-
-
-
-% usar ficha 8 limitações ao nr de predicatos adicionados
-
-
-
-% assert -> adiciona predicados
 
 
 %escrever factos de estafetas, clientes e encomendas para termos já alguns na BD
@@ -24,45 +16,72 @@ veiculo(bicicleta, 10, 5). %inserir preço por km ?? ou só na função do custo
 veiculo(mota, 35, 20).
 veiculo(carro, 25, 100). 
 
-cliente(daniel, 0).
+% ----------- cliente(id, nrEncomendas) /2
+cliente(daniel, 3).
 cliente(abacao, 3).
 
-estafeta(joao, 0, 0).
-estafeta(caldas, 1, 4.3).  
+% ----------- estafeta(id, nrEntregas, avaliacao) /3
+estafeta(joao, 1, 4.4).
+estafeta(caldas, 3, 4.4).
+estafeta(ctt,2,4.4).
 
-encomenda(entregue, cadeira_gayming, abacao, caldas, 1, 10, landim, rua_ponte, "3 dias").
+% (3:2:2) -> prazo 3dias 2h 2min 
+% encomenda(Estado, Id, Peso, Volume, Freguesia/Morada, prazo)
+% ----------- encomenda(estado, id, idCliente, peso, volume, freguesia, morada, prazo -> (dias:horas:minutos)) /9
+encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, cadeira, daniel, 2 ,30, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, folha, daniel, 50 ,10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, portal, daniel, 16 ,30, escordo/rua_ponte,date(0,0,1)/time(12,0,0)).
+encomenda(entregue, sal, abacao, 2 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, joelhos, abacao, 80 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
+% 
+% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
 entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.4).
-entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.5).
-entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.6).
-entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.7).
-entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.8).
-entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.9).
+entrega(cadeira, ctt, mota, cinco_outubro, seis_outubro, 4.4).
+entrega(folha, ctt, mota, cinco_outubro, seis_outubro, 4.4).
+entrega(portal, joao, mota, cinco_outubro, seis_outubro, 4.4).
+entrega(sal, caldas, mota, cinco_outubro, seis_outubro, 4.4).
+entrega(joelhos, ctt, mota, cinco_outubro, seis_outubro, 4.4).
 
 
 solucoes(X, Y, Z) :- findall(X, Y, Z).
 
 
 % Invariante Estrutural:  nao permitir a insercao de conhecimento repetido
-% fazer insert veiculo????
-+veiculo(Name, A, B) :: (solucoes( (Name, A, B),(veiculo(Name, A, B)),S ),
+
++estafeta(Id, A, B) :: (solucoes( Id , estafeta(Id, A, B) ,S ),
                         length( S,N ), N == 1 ).
-+estafeta(Id, A, B) :: (solucoes( (Id, A, B),(estafeta(Id, A, B)),S ),
+        
++estafeta(Id, A, B) :: (solucoes( A , estafeta(Id, A, B) ,S ),
+                A >= 0 ).
+
+
++cliente(Id, A) :: (solucoes( Id , cliente(Id, A) ,S ),
                         length( S,N ), N == 1 ).
-+cliente(Id, A) :: (solucoes( (Id,A),(cliente(Id, A)),S ),
++encomenda(A, Id, B, C, D, E, F, G, H) :: (solucoes( Id , encomenda(A, Id, B, C, D, E, F, G, H) ,S ),
                         length( S,N ), N == 1 ).
-+encomenda(A, Id, B, C, D, E, F, G, H) :: (solucoes( (A, Id, B, C, D, E, F, G, H),(encomenda(A, Id, B, C, D, E, F, G, H)),S ),
-                        length( S,N ), N == 1 ).
-+cliente(Id, A, B, C, D, E) :: (solucoes( (Id, A, B, C, D, E),(cliente(Id, A, B, C, D, E)),S ),
++cliente(Id, A, B, C, D, E) :: (solucoes( Id , cliente(Id, A, B, C, D, E) ,S ),
                         length( S,N ), N == 1 ).
 
 
 % estados: 1->registada, 2->distribuição, 3->entregue
 % prazos de entrega (imediato, 2h, 6h, 1 dia, etc).
 
-% ----------- encomenda(estado, id, idCliente, idEstafeta, peso, volume, freguesia, morada, prazo) /9
-% ----------- estafeta(id, nrEntregas, avaliacao) /3
-% ----------- cliente(id, nrEncomendas) /2
-% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
+
+% Evolução do conhecimento
+evolucao( Termo ) :- findall(Invariante, +Termo::Invariante, Lista),
+                     insercao(Termo),
+                     teste(Lista).
+
+insercao(Termo) :- assert(Termo).
+insercao(Termo) :- retract(Termo), !, fail.
+
+teste([]).
+teste([R|LR]) :- R, teste(LR).
+
+adicionaParEstafeta( [] , L , [L]).
+adicionaParEstafeta( [(Est,L)|T], (Est, Enc), [(Est,L2)|T] ) :- append(L,[Enc],L2).
+adicionaParEstafeta([(H,H2)|T1],L,[(H,H2)|T3]) :- adicionaParEstafeta(T1,L,T3).
 
 
 ajuda(geral, "escrever todos os comandos de ajuda aqui").
@@ -74,13 +93,10 @@ ajuda(encomenda, "Usar a funcao createEncomenda() com os parâmetros:
 help(X) :- ajuda(X, Y), write(Y). % tentar tirar o true que aparece depois
 
 
+createEstafeta(Id) :- evolucao(estafeta(Id,0,0)).
 
-
-%createEstafeta(Id) :- \+estafeta(Id, _, _), assert(estafeta(Id, 0, 0)),  write("Estafeta adicionado"), !;
-%                        write("Estafeta já existente").
-createEstafeta(Id) :- \+estafeta(Id, _, _), assert(estafeta(Id, 0, 0)),  write("Estafeta adicionado"), !;
-                        write("Estafeta já existente").
-
+addEstafeta(Id,Av) :- estafeta(Id,Nr,Media), NewNr is Nr + 1, NewMedia is (Media*Nr + Av)/NewNr,
+                      replace_existing_fact(estafeta(Id,Nr,Media),estafeta(Id,NewNr,NewMedia)).
 
 createCliente(Id) :- \+cliente(Id, _), assert(cliente(Id, 0)), write("Cliente adicionado"), !;
                         write("Cliente já existente").
@@ -166,11 +182,16 @@ trackEncomenda(Id) :- \+encomenda(_, Id, _, _, _, _, _, _, _), write("Encomenda 
 % ---------------------------------------
 
 
-% esta mal
 % --------------------------------------- identificar os clientes servidos por um determinado estafeta;
-findClientesServidosPorEstafeta(IdEstafeta, Answer) :- % resolver para quando nao existe, 
-                estafeta(IdEstafeta, Nr, _), Nr =:= 0, Answer = "O estafeta ainda não realizou entregas", !;
-                setof(IdCliente, encomenda(entregue, _, IdCliente, IdEstafeta, _, _, _, _, _), Answer).
+findClientesServidosPorEstafeta(IdEstafeta, Answer) :- 
+                estafeta(IdEstafeta, Nr, _), Nr == 0, Answer = [], write(IdEstafeta),write(" ainda não realizou entregas"), !;
+                findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, _), Aux),
+                clientesPorEncomenda(Aux,[],Answer).
+
+clientesPorEncomenda([],L,L).
+clientesPorEncomenda([Id|T],L,Answer) :- encomenda(_,Id,IdCliente,_,_,_,_), \+member(IdCliente,L), !,
+                                         append([IdCliente],L,L2), clientesPorEncomenda(T,L2,Answer).
+clientesPorEncomenda([H|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
 % ---------------------------------------
 
 
@@ -262,8 +283,6 @@ averageList( List, Avg ) :-
 
 
 
-
 replace_existing_fact(OldFact, NewFact) :-
-    call(OldFact),
     retract(OldFact),
-    assertz(NewFact).
+    assert(NewFact).
