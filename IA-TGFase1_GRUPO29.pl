@@ -169,10 +169,9 @@ maisEcologico(Veiculo, Answer) :-% se for só bicicleta cagar no 'Veiculo'
             findEstafetasPorVeiculo(Veiculo, Bag), calcularEstafetaQueMaisUsouVeiculo(Veiculo, Bag, 0, Answer).
 % ---------------------------------------
 
-% encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
-% entrega(folha, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+
 % --------------------------------------- identificar que estafetas entregaram determinada(s) encomenda(s) a um determinado cliente;
-% cliente entra onde ???? DUVIDA -> basiscamente é a reverse da de baixo, atraves do cliente determina estafetas que o serviram
+
 trackEncomenda(IdCliente, R) :- findall(IdEnc, encomenda(entregue,IdEnc,IdCliente,_,_,_,_),Aux),
                                 idEncPorEstafeta(Aux,[],R).
 
@@ -190,6 +189,7 @@ checkClienteEnc(_,[],R,R).
 checkClienteEnc(IdC, [IdEnc|T], Acc, R) :- encomenda(entregue,IdEnc,IdC,_,_,_,_), append([IdEnc],Acc,Acc2),
                                          checkClienteEnc(IdC,T,Acc2,R).
 checkClienteEnc(IdC,[_|T],Acc,R) :- checkClienteEnc(IdC,T,Acc,R).
+
 % ---------------------------------------
 
 
