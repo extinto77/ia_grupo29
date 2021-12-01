@@ -36,12 +36,12 @@ encomenda(entregue, sal, abacao, 2 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,
 encomenda(entregue, joelhos, abacao, 80 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
 % 
 % ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
-entrega(cadeira_gayming, caldas, mota, cinco_outubro, seis_outubro, 4.4).
-entrega(cadeira, ctt, mota, cinco_outubro, seis_outubro, 4.4).
-entrega(folha, ctt, mota, cinco_outubro, seis_outubro, 4.4).
-entrega(portal, joao, mota, cinco_outubro, seis_outubro, 4.4).
-entrega(sal, caldas, mota, cinco_outubro, seis_outubro, 4.4).
-entrega(joelhos, ctt, mota, cinco_outubro, seis_outubro, 4.4).
+entrega(cadeira_gayming, caldas, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(cadeira, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(folha, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(portal, joao, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(sal, caldas, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(joelhos, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 
 
 solucoes(X, Y, Z) :- findall(X, Y, Z).
@@ -192,6 +192,7 @@ clientesPorEncomenda([],L,L).
 clientesPorEncomenda([Id|T],L,Answer) :- encomenda(_,Id,IdCliente,_,_,_,_), \+member(IdCliente,L), !,
                                          append([IdCliente],L,L2), clientesPorEncomenda(T,L2,Answer).
 clientesPorEncomenda([H|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
+
 % ---------------------------------------
 
 
@@ -267,22 +268,22 @@ averageList( List, Avg ) :-
 
 
 % --------------------------------------- calcular o peso total transportado por estafeta num determinado dia.
-%pesoNumDia(IdEstafeta, Dia Answer) :- findall(Peso, ).
-% ---------------------------------------
+pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) :- findall(IdEnc,
+                                                (entrega(IdEnc,IdEstafeta,_,Di/_,Df/_,_), 
+                                                dateStamp(Di,date(Ano,Mes,Dia),Dif1), Dif1 >= 0,
+                                                dateStamp(Df,date(Ano,Mes,Dia),Dif2), Dif2 =< 0),
+                                                Ans), calcPesoEnc(Ans,0,Answer).
 
-
-
-
-
-
-
-
-
-% write($X).
-
-
+calcPesoEnc([],Acc,Acc).
+calcPesoEnc([IdEnc|T],Acc,R) :- encomenda(_,IdEnc, _, Peso, _, _ ,_), Acc2 is Acc + Peso, calcPesoEnc(T,Acc2,R).
 
 
 replace_existing_fact(OldFact, NewFact) :-
     retract(OldFact),
     assert(NewFact).
+
+
+dateStamp(DateI, DateF, Days) :-
+        date_time_stamp(DateI, TimeStamp1), 
+        date_time_stamp(DateF, TimeStamp2),
+        Days is (TimeStamp2 - TimeStamp1)/86400.
