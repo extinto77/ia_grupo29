@@ -326,17 +326,16 @@ averageList( List, Avg ) :-
         Avg is Sum / Length.
 % ---------------------------------------
 
-% -------- entrega(cadeira, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 % --------------------------------------- identificar o número total de entregas pelos diferentes meios de transporte,num determinado intervalo de tempo;
 nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :- 
                                         findall(Veiculo,
                                         (entrega(_,_,Veiculo,_,D/H,_),
                                         checkTimeInterval(D,H,date(AnoI,MesI,DiaI),time(Hi,Mi,0),date(AnoF,MesF,DiaF),time(Hf,Mf,0))),
-                                        Aux), nrEPTAux(Aux,[],R).
+                                        Aux), listToPairList(Aux,[],R).
 % [mota,mota,carro,bicicleta,carro,mota]
-nrEPTAux([],R,R).
-nrEPTAux([H|T],L,R) :- \+member((H,_),L), append([(H,1)],L,L2), nrEPTAux(T,L2,R).
-nrEPTAux([H|T],L,R) :-  incrementaPar(H,L,[],Aux), nrEPTAux(T,Aux,R).
+listToPairList([],R,R).
+listToPairList([H|T],L,R) :- \+member((H,_),L), append([(H,1)],L,L2), listToPairList(T,L2,R).
+listToPairList([H|T],L,R) :-  incrementaPar(H,L,[],Aux), listToPairList(T,Aux,R).
 
 incrementaPar(H,[(H,Nr)|T],L,R) :- NewNr is Nr + 1, append([(H,NewNr)|T],L,R).
 incrementaPar(H,[(H2,Nr)|T],L,R) :- append([(H2,Nr)],L,Aux),incrementaPar(H,T,Aux,R). 
@@ -345,9 +344,13 @@ checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
                                        timeElapsed(D,H,Df,Hf,Res2), Res2 >= 0.
 % ---------------------------------------
 
-
+% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
 % --------------------------------------- identificar o número total de entregas pelos estafetas, num determinado intervalo de tempo;
-
+nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
+                                        findall(IdEst, 
+                                                (entrega(_,IdEst,_,_,D/H,_),
+                                        checkTimeInterval(D,H,date(AnoI,MesI,DiaI),time(Hi,Mi,0),date(AnoF,MesF,DiaF),time(Hf,Mf,0))),
+                                        Aux), listToPairList(Aux,[],R).
 % ---------------------------------------
 
 
