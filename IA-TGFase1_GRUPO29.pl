@@ -3,7 +3,7 @@
 %:- dynamic(veiculo/3).
 :- dynamic(estafeta/3).
 :- dynamic(cliente/2).
-:- dynamic(encomenda/9).
+:- dynamic(encomenda/7).
 :- dynamic(entrega/6).
 
 
@@ -36,11 +36,11 @@ encomenda(entregue, sal, abacao, 2 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,
 encomenda(entregue, joelhos, abacao, 80 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
 % 
 % ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
-entrega(cadeira_gayming, caldas, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(cadeira_gayming, caldas, bicicleta, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 entrega(cadeira, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 entrega(folha, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(portal, joao, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(sal, caldas, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(portal, joao, carro, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(sal, caldas, carro, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 entrega(joelhos, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 
 
@@ -52,8 +52,8 @@ solucoes(X, Y, Z) :- findall(X, Y, Z).
 +estafeta(Id, A, B) :: (solucoes( Id , estafeta(Id, A, B) ,S ),
                         length( S,N ), N == 1 ).
         
-+estafeta(Id, A, B) :: (solucoes( A , estafeta(Id, A, B) ,S ),
-                A >= 0 ).
++estafeta(Id, A, B) :: (solucoes( A , (estafeta(Id, A, B),A >=0) ,S ),
+                        length(S,N), N == 1).
 
 
 +cliente(Id, A) :: (solucoes( Id , cliente(Id, A) ,S ),
@@ -105,7 +105,7 @@ createCliente(Id) :- \+cliente(Id, _), assert(cliente(Id, 0)), write("Cliente ad
 
                 %fazer os teste de id da encomenda e assim antes, esxiste id cliente, estafeta e assim
 createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Prazo) :- 
-                    encomenda(_, Id, _, _, _, _, _, _, _ ), write("Encomenda já existente"), !;
+                    encomenda(_, Id, _, _, _, _, _), write("Encomenda já existente"), !;
                     \+cliente(IdCliente, _), write("Cliente não existente"), !;
                     Peso > 100, write("Nenhum veiculo suporta a entrega da encomenda"), !; 
                     assert(encomenda(registada, Id, IdCliente, empty, Peso, Volume, Freguesia, Morada, Prazo)).
@@ -115,12 +115,12 @@ createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Prazo) :-
 
 % só deve ser feita pelo sistema da empresa, é preciso certificar outra vez os campos??
 createEntrega(IdEncomenda, IdEstafeta, Veiculo, Inicio, Prazo) :-
-                \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write("Encomenda não existente"), !;
+                \+encomenda(_, IdEncomenda, _, _, _, _, _), write("Encomenda não existente"), !;
                 \+estafeta(IdEstafeta, _, _), write("Estafeta não existente"), !;
-                encomenda(entregue, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já foi entregue"), !;
-                encomenda(distribuicao, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já se encontra em distribuição"), !;
+                encomenda(entregue, IdEncomenda, _, _, _, _, _), write("A encomenda já foi entregue"), !;
+                encomenda(distribuicao, IdEncomenda, _, _, _, _, _), write("A encomenda já se encontra em distribuição"), !;
                 
-                encomenda(_, IdEncomenda, _, _, Peso, _, _, _, _ ), veiculo(Veiculo, _, Max), 
+                encomenda(_, IdEncomenda, _, _, Peso, _, _), veiculo(Veiculo, _, Max), 
                             Max < Peso, write("Veículo selecionado não suporta carga da encomenda"), !;
                 % adicionar info aos outros factos !!!!
                 replace_existing_fact(encomenda(_, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo), 
@@ -130,9 +130,9 @@ createEntrega(IdEncomenda, IdEstafeta, Veiculo, Inicio, Prazo) :-
 
 
 entregarEncomenda(IdEncomenda, DataFim, Avaliacao) :-
-                    \+encomenda(_, IdEncomenda, _, _, _, _, _, _, _), write("Encomenda não existente"), !;
-                    encomenda(entregue, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda já foi entregue"), !;
-                    encomenda(registada, IdEncomenda, _, _, _, _, _, _, _), write("A encomenda ainda não está em distribuição"), !;
+                    \+encomenda(_, IdEncomenda, _, _, _, _, _), write("Encomenda não existente"), !;
+                    encomenda(entregue, IdEncomenda, _, _, _, _, _), write("A encomenda já foi entregue"), !;
+                    encomenda(registada, IdEncomenda, _, _, _, _, _), write("A encomenda ainda não está em distribuição"), !;
 
                     replace_existing_fact(encomenda(_, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo), 
                                         encomenda(entregue, IdEncomenda, IdCliente, IdEstafeta, Peso, Volume, Freguesia, Morada, Prazo)), 
@@ -169,16 +169,27 @@ maisEcologico(Veiculo, Answer) :-% se for só bicicleta cagar no 'Veiculo'
             findEstafetasPorVeiculo(Veiculo, Bag), calcularEstafetaQueMaisUsouVeiculo(Veiculo, Bag, 0, Answer).
 % ---------------------------------------
 
-
+% encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
+% entrega(folha, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 % --------------------------------------- identificar que estafetas entregaram determinada(s) encomenda(s) a um determinado cliente;
 % cliente entra onde ???? DUVIDA -> basiscamente é a reverse da de baixo, atraves do cliente determina estafetas que o serviram
-trackEncomenda(Id) :- \+encomenda(_, Id, _, _, _, _, _, _, _), write("Encomenda não existente"), !;
-                        encomenda(entregue, Id, _, IdEstafeta, _, _, _, _, _),
-                                write("A encomenda já foi entregue por: "), write(IdEstafeta), !;
-                        encomenda(registada, Id, _, _, _, _, _, _, _),
-                                write("A encomenda está registada, dentro de momentos irá ser distribuída"), !;
-                        encomenda(distribuicao, Id, _, IdEstafeta, _, _, _, _, _),
-                                write("A encomenda encontra-se em distribuição pelo estafeta: "), write(IdEstafeta).
+trackEncomenda(IdCliente, R) :- findall(IdEnc, encomenda(entregue,IdEnc,IdCliente,_,_,_,_),Aux),
+                                idEncPorEstafeta(Aux,[],R).
+
+idEncPorEstafeta([],R,R).
+idEncPorEstafeta([IdEnc|T],L,R) :- entrega(IdEnc,IdEst,_,_,_,_), \+member((IdEst,_),L), append([(IdEst,[IdEnc])],L,L2), idEncPorEstafeta(T,L2,R).
+idEncPorEstafeta([IdEnc|T],L,R) :- entrega(IdEnc,IdEst,_,_,_,_), adicionaElemento(IdEnc,IdEst,L,[],L2), idEncPorEstafeta(T,L2,R).
+
+adicionaElemento(IdEnc,IdEst,[(IdEst,List)|T],Acc,R) :- append([IdEnc],List,List2), append([(IdEst,List2)|T],Acc,R).
+adicionaElemento(IdEnc,IdEst,[H|T],Acc,R) :- append([H],Acc,Acc2), adicionaElemento(IdEnc,IdEst,T,Acc2,R).
+
+
+trackSomeEncomenda(IdCliente,ListEnc,R) :- checkClienteEnc(IdCliente,ListEnc,[],Aux), idEncPorEstafeta(Aux,[],R).
+
+checkClienteEnc(_,[],R,R).
+checkClienteEnc(IdC, [IdEnc|T], Acc, R) :- encomenda(entregue,IdEnc,IdC,_,_,_,_), append([IdEnc],Acc,Acc2),
+                                         checkClienteEnc(IdC,T,Acc2,R).
+checkClienteEnc(IdC,[_|T],Acc,R) :- checkClienteEnc(IdC,T,Acc,R).
 % ---------------------------------------
 
 
@@ -191,7 +202,7 @@ findClientesServidosPorEstafeta(IdEstafeta, Answer) :-
 clientesPorEncomenda([],L,L).
 clientesPorEncomenda([Id|T],L,Answer) :- encomenda(_,Id,IdCliente,_,_,_,_), \+member(IdCliente,L), !,
                                          append([IdCliente],L,L2), clientesPorEncomenda(T,L2,Answer).
-clientesPorEncomenda([H|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
+clientesPorEncomenda([_|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
 
 % ---------------------------------------
 
@@ -251,9 +262,23 @@ averageList( List, Avg ) :-
         Avg is Sum / Length.
 % ---------------------------------------
 
-
+% -------- entrega(cadeira, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 % --------------------------------------- identificar o número total de entregas pelos diferentes meios de transporte,num determinado intervalo de tempo;
+nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :- 
+                                        findall(Veiculo,
+                                        (entrega(_,_,Veiculo,_,D/H,_),
+                                        checkTimeInterval(D,H,date(AnoI,MesI,DiaI),time(Hi,Mi,0),date(AnoF,MesF,DiaF),time(Hf,Mf,0))),
+                                        Aux), nrEPTAux(Aux,[],R).
+% [mota,mota,carro,bicicleta,carro,mota]
+nrEPTAux([],R,R).
+nrEPTAux([H|T],L,R) :- \+member((H,_),L), append([(H,1)],L,L2), nrEPTAux(T,L2,R).
+nrEPTAux([H|T],L,R) :-  incrementaPar(H,L,[],Aux), nrEPTAux(T,Aux,R).
 
+incrementaPar(H,[(H,Nr)|T],L,R) :- NewNr is Nr + 1, append([(H,NewNr)|T],L,R).
+incrementaPar(H,[(H2,Nr)|T],L,R) :- append([(H2,Nr)],L,Aux),incrementaPar(H,T,Aux,R). 
+
+checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
+                                       timeElapsed(D,H,Df,Hf,Res2), Res2 >= 0.
 % ---------------------------------------
 
 
@@ -282,8 +307,33 @@ replace_existing_fact(OldFact, NewFact) :-
     retract(OldFact),
     assert(NewFact).
 
+validateTime(H1, M1, S1) :-
+        H1<24, H1>=0, M1<60, M1>=0, S1<60, S1>=0.
+%validateDate(A, M, D) .
+
+timeStamp(time(H1, M1, S1), time(H2, M2, S2), Days):-
+        TimeStamp1 is (H1 + (M1/60) + (S1/60)/60)/24,
+        TimeStamp2 is (H2 + (M2/60) + (S2/60)/60)/24,
+        Days is TimeStamp2 -TimeStamp1.
 
 dateStamp(DateI, DateF, Days) :-
         date_time_stamp(DateI, TimeStamp1), 
         date_time_stamp(DateF, TimeStamp2),
         Days is (TimeStamp2 - TimeStamp1)/86400.
+
+timeElapsed(DateI, TimeI, DateF, TimeF, Ans) :-
+        dateStamp(DateI, DateF, X1), timeStamp(TimeI, TimeF, X2),
+        Ans is X1 + X2.
+
+% dizer que prazo máximo é de 30 dias
+convertTime(Val, Date/Time) :-
+        Val>0, rounding(Val, D, Dec1),
+        rounding(Dec1*24, H, Dec2), 
+        rounding(Dec2*60, M, _),
+        Date = date(0, 0, D), Time = time(H, M, 0).
+
+rounding(Val, Int, Decimal) :-
+        (Val>1) -> (
+                round(Val, Rounded), ((Val>Rounded)-> Int is Rounded; Int is Rounded-1), Decimal is Val-Int
+        );
+        Int is 0, Decimal is Val.
