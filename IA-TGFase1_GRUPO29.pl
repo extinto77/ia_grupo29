@@ -58,14 +58,32 @@ veiculo(bicicleta, 10, 5). %inserir preço por km ?? ou só na função do custo
 veiculo(mota, 35, 20).
 veiculo(carro, 25, 100). 
 
-% ----------- cliente(id, totalEncomendas) /2
-cliente(daniel, 0).
-cliente(abacao, 1).
+% ----------- cliente(id, nrEncomendas) /2
+cliente(daniel, 3).
+cliente(abacao, 3).
 
-% ----------- estafeta(id, totalEntregas, Media_avaliacao) /3
-estafeta(joao, 0, 0).
-estafeta(caldas, 1, 4.4).
+% ----------- estafeta(id, nrEntregas, avaliacao) /3
+estafeta(joao, 1, 4.4).
+estafeta(caldas, 3, 4.4).
+estafeta(ctt,2,4.4).
 
+% (3:2:2) -> prazo 3dias 2h 2min 
+% encomenda(Estado, Id, Peso, Volume, Freguesia/Morada, prazo)
+% ----------- encomenda(estado, id, idCliente, peso, volume, freguesia, morada, prazo -> (dias:horas:minutos)) /9
+encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, cadeira, daniel, 2 ,30, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, folha, daniel, 50 ,10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, portal, daniel, 16 ,30, escordo/rua_ponte,date(0,0,1)/time(12,0,0)).
+encomenda(entregue, sal, abacao, 2 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
+encomenda(entregue, joelhos, abacao, 80 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
+% 
+% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
+entrega(cadeira_gayming, caldas, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(cadeira, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(folha, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(portal, joao, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(sal, caldas, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(joelhos, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 
 
 % ----------- encomenda(estado, id, idCliente, peso, volume, freguesia/morada, Date(Y,M,D)/Time(H,M,S) (prazo)) /7
@@ -86,6 +104,21 @@ encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte, date(0, 0,
 encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte, date(0, 0, 0)/time(12, 0, 0)).
 
 
+% Invariante Estrutural:  nao permitir a insercao de conhecimento repetido
+
++estafeta(Id, A, B) :: (solucoes( Id , estafeta(Id, A, B) ,S ),
+                        length( S,N ), N == 1 ).
+        
++estafeta(Id, A, B) :: (solucoes( A , estafeta(Id, A, B) ,S ),
+                A >= 0 ).
+
+
++cliente(Id, A) :: (solucoes( Id , cliente(Id, A) ,S ),
+                        length( S,N ), N == 1 ).
++encomenda(A, Id, B, C, D, E, F, G, H) :: (solucoes( Id , encomenda(A, Id, B, C, D, E, F, G, H) ,S ),
+                        length( S,N ), N == 1 ).
++cliente(Id, A, B, C, D, E) :: (solucoes( Id , cliente(Id, A, B, C, D, E) ,S ),
+                        length( S,N ), N == 1 ).
 
 
 % ----------- entrega(idEncomenda, idEstafeta, veiculo, DateI/TimeI, DateF/TimeF, avaliacao) /6
@@ -96,6 +129,20 @@ solucoes(X, Y, Z) :- findall(X, Y, Z).
 
 
 % estados: 1->registada, 2->distribuição, 3->entregue
+% Evolução do conhecimento
+evolucao( Termo ) :- findall(Invariante, +Termo::Invariante, Lista),
+                     insercao(Termo),
+                     teste(Lista).
+
+insercao(Termo) :- assert(Termo).
+insercao(Termo) :- retract(Termo), !, fail.
+
+teste([]).
+teste([R|LR]) :- R, teste(LR).
+
+adicionaParEstafeta( [] , L , [L]).
+adicionaParEstafeta( [(Est,L)|T], (Est, Enc), [(Est,L2)|T] ) :- append(L,[Enc],L2).
+adicionaParEstafeta([(H,H2)|T1],L,[(H,H2)|T3]) :- adicionaParEstafeta(T1,L,T3).
 
 
 ajuda(geral, "escrever todos os comandos de ajuda aqui").
@@ -116,6 +163,8 @@ help(X) :- ajuda(X, Y), write(Y). % tentar tirar o true que aparece depois
 createEstafeta(Id) :- \+estafeta(Id, _, _), assert(estafeta(Id, 0, 0)),  write("Estafeta adicionado"), !;
                         write("Estafeta já existente").
 
+addEstafeta(Id,Av) :- estafeta(Id,Nr,Media), NewNr is Nr + 1, NewMedia is (Media*Nr + Av)/NewNr,
+                      replace_existing_fact(estafeta(Id,Nr,Media),estafeta(Id,NewNr,NewMedia)).
 
 createCliente(Id) :- \+cliente(Id, _), assert(cliente(Id, 0)), write("Cliente adicionado"), !;
                         write("Cliente já existente").
@@ -205,13 +254,17 @@ trackEncomenda(Id, Ans) :- \+encomenda(_, Id, _, _, _, _, _, _, _), write("Encom
 % ---------------------------------------
 
 
-% esta mal
 % --------------------------------------- identificar os clientes servidos por um determinado estafeta;
-findClientesServidosPorEstafeta(IdEstafeta, Answer) :- % resolver para quando nao existe, 
-                \+estafeta(IdEstafeta, _, _), write("Estafeta não existente"), !;
-                estafeta(IdEstafeta, Nr, _), Nr =:= 0, Answer = "O estafeta ainda não realizou entregas", !;
-                setof(IdCliente, encomenda(entregue, A, IdCliente, IdEstafeta, B, C, D), Answer).
-        
+findClientesServidosPorEstafeta(IdEstafeta, Answer) :- 
+                estafeta(IdEstafeta, Nr, _), Nr == 0, Answer = [], write(IdEstafeta),write(" ainda não realizou entregas"), !;
+                findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, _), Aux),
+                clientesPorEncomenda(Aux,[],Answer).
+
+clientesPorEncomenda([],L,L).
+clientesPorEncomenda([Id|T],L,Answer) :- encomenda(_,Id,IdCliente,_,_,_,_), \+member(IdCliente,L), !,
+                                         append([IdCliente],L,L2), clientesPorEncomenda(T,L2,Answer).
+clientesPorEncomenda([H|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
+
 % ---------------------------------------
 
 
@@ -304,22 +357,16 @@ averageList( List, Avg ) :-
 
 
 % --------------------------------------- calcular o peso total transportado por estafeta num determinado dia.
-%pesoNumDia(IdEstafeta, Dia Answer) :- findall(Peso, ).
-% ---------------------------------------
-
-
-
-
-
-
-
-
-
-% write($X).
-
-
 addCliente(Id) :- cliente(Id,Nr), NewNr is Nr + 1, replace_existing_fact(cliente(Id,Nr),cliente(Id,NewNr)).
 
+pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) :- findall(IdEnc,
+                                                (entrega(IdEnc,IdEstafeta,_,Di/_,Df/_,_), 
+                                                dateStamp(Di,date(Ano,Mes,Dia),Dif1), Dif1 >= 0,
+                                                dateStamp(Df,date(Ano,Mes,Dia),Dif2), Dif2 =< 0),
+                                                Ans), calcPesoEnc(Ans,0,Answer).
+
+calcPesoEnc([],Acc,Acc).
+calcPesoEnc([IdEnc|T],Acc,R) :- encomenda(_,IdEnc, _, Peso, _, _ ,_), Acc2 is Acc + Peso, calcPesoEnc(T,Acc2,R).
 
 addEstafeta(Id,Av) :- estafeta(Id,Nr,Media), NewNr is Nr + 1, arredondar(((Media*Nr + Av)/NewNr), NewMedia, 2),
                         replace_existing_fact(estafeta(Id,Nr,Media),estafeta(Id,NewNr,NewMedia)).
