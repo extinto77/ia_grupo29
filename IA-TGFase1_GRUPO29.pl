@@ -223,14 +223,15 @@ entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
                 
 query1(Ans) :- maisEcologico(Ans).
 query2(Cliente, Ans) :- trackEncomenda(Cliente, Ans).
-query3
-query4
-query5
-query6
-query7
-query8
-                
-                
+query3(Estafeta, Ans) :- findClientesServidosPorEstafeta(Estafeta, Ans).
+query4(Dia, Mes, Ano, Ans) :- calcFaturacao(Dia, Mes, Ano, Ans).
+query5(Top1, Top2, Top3) :- bestZonas(Top1, Top2, Top3).
+query6(Estafeta, Ans) :- calcularMediaSatisfacaoEstafeta(Estafeta, Ans).
+query7(AnoI, MesI, DiaI, Hi, Mi, AnoF, MesF, DiaF, Hf, Mf, Ans) :- nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,Ans).
+query8(AnoI, MesI, DiaI, Hi, Mi, AnoF, MesF, DiaF, Hf, Mf, Ans) :- nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,Ans).
+query9(DateI, TimeI, DateF, TimeF,Ans) :- numEncomendas(DateI, TimeI, DateF, TimeF,Ans).
+query10(Estafeta, Ano, Mes, Dia, Ans) :- pesoNumDia(Estafeta, Dia/Mes/Ano, Ans).
+
 % ---------------------------------------------------------------------------------------------------------             
 % -------- identificar o estafeta que utilizou mais vezes um meio de transporte mais ecológico;
 % ---------------------------------------------------------------------------------------------------------             
@@ -268,7 +269,7 @@ mediaEcologia(L,R) :- somaLista(L,Aux), length(L,Size), R is Aux/Size.
 checkEcologica(_,bicicleta,1). 
 checkEcologica(Peso,mota,R) :- (Peso > 5) -> R is 2 ; R is 4.
 checkEcologica(Peso,carro,R) :- (Peso > 20) -> R is 3 ; (Peso > 5) -> R is 6 ; R is 9.      
-% ---------------------------------------
+% ---------------------------------------------------------------------------------------------------------             
 
 
 
@@ -294,7 +295,7 @@ checkClienteEnc(_,[],R,R).
 checkClienteEnc(IdC, [IdEnc|T], Acc, R) :- encomenda(entregue,IdEnc,IdC,_,_,_,_), append([IdEnc],Acc,Acc2),
                                          checkClienteEnc(IdC,T,Acc2,R).
 checkClienteEnc(IdC,[_|T],Acc,R) :- checkClienteEnc(IdC,T,Acc,R).
-% ---------------------------------------
+% ---------------------------------------------------------------------------------------------------------             
 
 
 
@@ -311,7 +312,7 @@ clientesPorEncomenda([],L,L).
 clientesPorEncomenda([Id|T],L,Answer) :- encomenda(_,Id,IdCliente,_,_,_,_), \+member(IdCliente,L), !,
                                          append([IdCliente],L,L2), clientesPorEncomenda(T,L2,Answer).
 clientesPorEncomenda([_|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
-% ---------------------------------------
+% ---------------------------------------------------------------------------------------------------------             
 
 
 
@@ -321,7 +322,7 @@ clientesPorEncomenda([_|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
 
 %quanto maior o prazo menor o preco, o peso influencia mais o preço do que o volume
 
-calcFaturacao(Dia/Mes/Ano,R) :- findall( Preco, 
+calcFaturacao(Dia, Mes, Ano, R) :- findall( Preco, 
                         (encomenda(entregue,IdEnc,_,_,_,_,_),
                         entrega(IdEnc,_,_,_,date(Ano,Mes,Dia)/_,_),   
                         calcPreco(IdEnc,Preco)), Bag),
@@ -335,7 +336,7 @@ calcPreco(IdEnc,Preco) :- encomenda(_,IdEnc,_,Peso,Volume,_,Dp/Tp), entrega(IdEn
 
 somaLista([],0).
 somaLista([H|T],R) :- somaLista(T,Resto), R is Resto + H. 
-% ---------------------------------------
+% ---------------------------------------------------------------------------------------------------------             
 
 
 
@@ -357,7 +358,6 @@ findTop([H|T], N1, N2, N3, Top1, Top2, Top3) :-
                                 (H>Top3) -> findTop(T, N1, N2, N3, Top1, Top2, H);
                                 findTop(T, N1, N2, N3, Top1, Top2, Top3).
 
-
 count([],_,0).
 count([Elem|Tail],Elem,Y):- count(Tail,Elem,Z), Y is 1+Z.
 count([Elem1|Tail],Elem,Z):- Elem1\=Elem,count(Tail,Elem,Z).
@@ -368,10 +368,13 @@ countall(List,Count) :-
 
 counteach(L1,_,[],L1).
 counteach(L1,L,[H|T],R) :- count(L,H,Count), append(L1,[Count],L2), counteach(L2,L,T,R).
+% ---------------------------------------------------------------------------------------------------------             
 
-% ---------------------------------------
 
+
+% ---------------------------------------------------------------------------------------------------------             
 % ----------- calcular a classificação media de satisfação de cliente para um determinado estafeta;
+% ---------------------------------------------------------------------------------------------------------             
 calcularMediaSatisfacaoEstafeta(IdEstafeta, Answer) :- 
                     estafeta(IdEstafeta, Nr, _), Nr =:= 0, Answer = "O estafeta ainda não realizou entregas", !;
                     findall(Avaliacao, entrega( _, IdEstafeta, _, _, _, Avaliacao), X), 
@@ -385,19 +388,23 @@ validarAvaliacao([Head|Tail], List) :-
             (Head < 0 -> List = Output ;  List = [Head|Output] ), 
             validarAvaliacao(Tail, Output).
 
-
 averageList( List, Avg ) :-
         somaLista( List, Sum ),
         length( List, Length ),
         Avg is Sum / Length.
-% ---------------------------------------
+% ---------------------------------------------------------------------------------------------------------             
 
+
+
+% ---------------------------------------------------------------------------------------------------------             
 % ---------- identificar o número total de entregas pelos diferentes meios de transporte,num determinado intervalo de tempo;
+% ---------------------------------------------------------------------------------------------------------             
 nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :- 
                                         findall(Veiculo,
                                         (entrega(_,_,Veiculo,_,D/H,_),
                                         checkTimeInterval(D,H,date(AnoI,MesI,DiaI),time(Hi,Mi,0),date(AnoF,MesF,DiaF),time(Hf,Mf,0))),
                                         Aux), listToPairList(Aux,[],R).
+
 
 listToPairList([],R,R).
 listToPairList([H|T],L,R) :- \+member((H,_),L), append([(H,1)],L,L2), listToPairList(T,L2,R).
@@ -411,7 +418,9 @@ checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
 % ---------------------------------------
      
 
+% ---------------------------------------------------------------------------------------------------------             
 % ----------- identificar o número total de entregas pelos estafetas, num determinado intervalo de tempo;
+% ---------------------------------------------------------------------------------------------------------             
 nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
                                         findall(IdEst, 
                                                 (entrega(_,IdEst,_,_,D/H,_),
@@ -420,7 +429,10 @@ nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
 % ---------------------------------------
 
 
+% ---------------------------------------------------------------------------------------------------------             
 % --------- calcular o número de encomendas entregues e não entregues pela Green Distribution, num determinado período de tempo;
+% ---------------------------------------------------------------------------------------------------------             
+
 % dizer que encomendas nao entregues para trás não contam.
 numEncomendas(DateI, TimeI, DateF, TimeF,Answer) :- findall(1 ,(entrega(_,_,_,Data1/Time1,empty/empty,_),
                                                                 checkTimeInterval(Data1,Time1,DateI,TimeI,DateF,TimeF)), 
@@ -430,11 +442,13 @@ numEncomendas(DateI, TimeI, DateF, TimeF,Answer) :- findall(1 ,(entrega(_,_,_,Da
                                           checkTimeInterval(Data,Time,DateI,TimeI,DateF,TimeF)),Bag2),
                                           length(Bag2, NrEntregue), 
                                         Answer = [(entregues, NrEntregue), (nao_entregues, NrNaoEntregue)].
-% ---------------------------------------
+% ---------------------------------------------------------------------------------------------------------             
 
 
+
+% ---------------------------------------------------------------------------------------------------------             
 % ------ calcular o peso total transportado por estafeta num determinado dia.
-
+% ---------------------------------------------------------------------------------------------------------             
 pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) :- findall(IdEnc,
                                                 (entrega(IdEnc,IdEstafeta,_,Di/_,Df/_,_), 
                                                 dateStamp(Di,date(Ano,Mes,Dia),Dif1), Dif1 >= 0,
@@ -443,6 +457,7 @@ pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) :- findall(IdEnc,
 
 calcPesoEnc([],Acc,Acc).
 calcPesoEnc([IdEnc|T],Acc,R) :- encomenda(_,IdEnc, _, Peso, _, _ ,_), Acc2 is Acc + Peso, calcPesoEnc(T,Acc2,R).
+% ---------------------------------------------------------------------------------------------------------             
 
 
 
