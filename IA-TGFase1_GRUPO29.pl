@@ -13,9 +13,35 @@
 
 % Factos:
 
+mes(1, janeiro, 31).
+mes(2, fevereiro, 28).
+mes(3, marco, 31).
+mes(4, abril, 30).
+mes(5, maio, 31).
+mes(6, junho, 30).
+mes(7, julho, 31).
+mes(8, agosto, 31).
+mes(9, setembro, 30).
+mes(10, outubro, 31).
+mes(11, novembro, 30).
+mes(12, dezembro, 31).
+
+
+
+
 validateTime(H1, M1, S1) :-
         H1<24, H1>=0, M1<60, M1>=0, S1<60, S1>=0.
-%validateDate(A, M, D) .
+
+verBissexto(Ano, Max) :-
+        (Mod1 is Ano mod 4, Mod2 is Ano mod 100, Mod3 is Ano mod 400) ,
+        (Mod1==0, (Mod2=\= 0 ; Mod3==0)) -> Max is 29;
+        Max is 28.
+
+validateDate(A, 2, D) :-
+        D>0, verBissexto(A, Max), D=<Max, !. % é preciso o '!' ??
+validateDate(A, M, D) :-
+        M>0, M=<12, mes(M, _, Max), D>0, D=<Max.
+
 
 timeStamp(time(H1, M1, S1), time(H2, M2, S2), Days):-
         TimeStamp1 is (H1 + (M1/60) + (S1/60)/60)/24,
@@ -44,8 +70,6 @@ rounding(Val, Int, Decimal) :-
         );
         Int is 0, Decimal is Val.
 
-
-
 % ----------- veiculo(tipo, velocidadeMedia, cargaMax)
 veiculo(bicicleta, 10, 5). %inserir preço por km ?? ou só na função do custo??
 veiculo(mota, 35, 20).
@@ -65,7 +89,7 @@ estafeta(caldas, 3, 4.4).
 estafeta(ctt,2,4.4).
 
 % (3:2:2) -> prazo 3dias 2h 2min 
-% encomenda(Estado, Id, Peso, Volume, Freguesia/Morada, prazo)
+% encomenda(Estado, Id, IdClinet, Peso, Volume, Freguesia/Morada, prazo)
 % ----------- encomenda(estado, id, idCliente, peso, volume, freguesia, morada, prazo -> (dias:horas:minutos)) /9
 encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
 encomenda(entregue, cadeira, daniel, 2 ,30, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
@@ -214,24 +238,31 @@ entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
 
 
 
+
+% % encomenda(Estado, Id, IdClinet, Peso, Volume, Freguesia/Morada, prazo)
 % ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
-
 % --------------------------------------- identificar o estafeta que utilizou mais vezes um meio de transporte mais ecológico; só falta testar
-findEstafetasPorVeiculo(Veiculo, Bag) :-
-                        findall(IdEstafeta, entrega(_, IdEstafeta, Veiculo,_, _, _), Bag).%,sort(Aux,Bag). % Bag possui lista de estafetas que usaram o veiculo em analise
 
-estafetaQuantasVezesVeiculo(Veiculo, Estafeta, Nr):-
-                        findall(arroz, entrega(_, Estafeta, Veiculo, _, _, _), Bag), length(Bag, Nr).  % DUVIDA : é assim que se encontra todos??
 
-calcularEstafetaQueMaisUsouVeiculo(_, [], _, Ans).
-calcularEstafetaQueMaisUsouVeiculo(Veiculo, [BagHead | Tail], Max, _) :- %esta mal
-                        estafetaQuatasVezesVeiculo(Veiculo, BagHead, Nr), 
-                        Nr>Max, calcularEstafetaQueMaisUsouVeiculo(Veiculo, Tail, Nr, BagHead). % se for por percentagem alterar aqui a comparação
-calcularEstafetaQueMaisUsouVeiculo(Veiculo, [_ | Tail], Max, Answer) :-
-                        calcularEstafetaQueMaisUsouVeiculo(Veiculo, Tail, Max, Answer).
-        
-maisEcologico(Veiculo, Answer) :-% se for só bicicleta cagar no 'Veiculo'
-            findEstafetasPorVeiculo(Veiculo, Bag), calcularEstafetaQueMaisUsouVeiculo(Veiculo, Bag, 0, Answer).
+maisEcologico(Answer) :-% se for só bicicleta cagar no 'Veiculo'
+            findall((IdEst,Peso,Veiculo),
+            (entrega(IdEnc,IdEst,Veiculo,_,_,_),encomenda(entregue,IdEnc,_,Peso,_,_,_)),
+            Bag),setof(Id,estafeta(Id,_,_),BagE), 
+
+% [(caldas,5,carro),(caldas,20,mota)] , caldas,
+organizar([],_,[]).
+%organizar([(A,_,_)|T1],IdEst,X) :- \+(A = IdEst), organizar(T1,IdEst,X).
+organizar([(IdEst,P,V)|T1],IdEst,X) :- checkEcologica(P,V,Aux), organizar(T1,IdEst,[Aux|X]). 
+organizar([_|T1],IdEst,X) :- organizar(T1,IdEst,X).
+
+
+
+mediaEcologia(L,R) :- somaLista(L,Aux), length(L,Size), R is Aux/Size. 
+
+checkEcologica(Peso,bicicleta,1). 
+checkEcologica(Peso,mota,R) :- (Peso > 5) -> R is 2 ; R is 4.
+checkEcologica(Peso,carro,R) :- (Peso > 20) -> R is 3 ; (Peso > 5) -> R is 6 ; R is 9.      
+
 % ---------------------------------------
 
 
@@ -273,23 +304,23 @@ clientesPorEncomenda([_|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
 
 % ---------------------------------------
 
-
+%quanto maior o prazo menor o preco, o peso influencia mais o preço do que o volume
 % --------------------------------------- calcular o valor faturado pela Green Distribution num determinado dia;
 calcFaturacao(Dia/Mes/Ano,R) :- findall( Preco, 
                         (encomenda(entregue,IdEnc,_,_,_,_,_),
                         entrega(IdEnc,_,_,_,date(Ano,Mes,Dia)/_,_),   
-                        calcPreco(IdEnc,Preco)), S),
-                        somaLista(S,R).
+                        calcPreco(IdEnc,Preco)), Bag),
+                        somaLista(Bag,R). 
 
+% calcPreco podia ter distancia mas so para fase2 :)
 calcPreco(IdEnc,Preco) :- encomenda(_,IdEnc,_,Peso,Volume,_,Dp/Tp), entrega(IdEnc,_,Veiculo,_,_,_), 
                           preco(Veiculo,Pv), timeElapsed(date(0,0,0),time(0,0,0),Dp,Tp,Aux),
-                          Preco is (Pv*(Peso*0.7+Volume*0.3))/(Aux+1).
+                          AuxPreco is (Pv*(Peso*0.7+Volume*0.3))/(Aux+1), arredondar(AuxPreco,Preco,2).
 
 somaLista([],0).
 somaLista([H|T],R) :- somaLista(T,Resto), R is Resto + H. 
 
 % ---------------------------------------
-
 
 % --------------------------------------- identificar quais as zonas (e.g., rua ou freguesia) com maior volume de entregas por parte da Green Distribution;
 bestZonas(Top1, Top2, Top3) :- findall(Freguesia, encomenda(_, _, _, _, _, Freguesia/_, _), Bag),
@@ -335,13 +366,9 @@ validarAvaliacao([Head|Tail], List) :-
             (Head < 0 -> List = Output ;  List = [Head|Output] ), 
             validarAvaliacao(Tail, Output).
 
-listSum( [], 0 ).
-listSum( [Head|Tail], Sum ) :-
-        listSum( Tail, Temp ),
-        Sum is Temp + Head.
 
 averageList( List, Avg ) :-
-        listSum( List, Sum ),
+        somaLista( List, Sum ),
         length( List, Length ),
         Avg is Sum / Length.
 % ---------------------------------------
