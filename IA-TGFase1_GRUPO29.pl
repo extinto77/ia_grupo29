@@ -367,21 +367,6 @@ checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
 
 % --------------------------------------- calcular o número de encomendas entregues e não entregues pela Green Distribution, num determinado período de tempo;
 
-numEncomendas(DateI/TimeI,DateF/TimeF,Answer) :- findall(1 ,entrega(_,_,_,_,empty/empty,_), Bag),
-                                          length(Bag,NrNaoEntregue),
-                                          findall(DataFim,(entrega(_,_,_,_,Data/Time,_), Data/Time =\= empty/empty,
-                                          checkTimeInterval(Data,Time,DateI,TimeI,DateF,TimeF)),Answer).
-                                
-
-
-remove(_,[],[]).
-remove(A, [A|B], L) :- remove(A, B, L),!.
-remove(A, [B|C], [B|E]) :- remove(A, C, E).
-
-
-
-
-
 % ---------------------------------------
 
 
