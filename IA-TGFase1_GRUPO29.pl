@@ -119,15 +119,28 @@ adicionaParEstafeta( [(Est,L)|T], (Est, Enc), [(Est,L2)|T] ) :- append(L,[Enc],L
 adicionaParEstafeta([(H,H2)|T1],L,[(H,H2)|T3]) :- adicionaParEstafeta(T1,L,T3).
 
 
-ajuda(geral, "escrever todos os comandos de ajuda aqui").
+ajuda(geral, 
+"\ncreateEstafeta(Id) -> Adiciona um estafeta a lista de estafetas. 
+createCliente(Id) -> Adiciona um cliente a lista de clientes.
+createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos) -> Adiciona uma encomenda a lista de encomendas.
+createEntrega(IdEncomenda, IdEstafeta, Veiculo, DataI, TimeI, Date ,Time) -> Adiciona uma encomenda a lista de Entregas.
+entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) -> Realiza a entrega de uma encomenda.
+findEstafetasPorVeiculo(Veiculo, Bag) -> Devolve os estafetas que usaram determinado veiculo.
+trackEncomenda(IdCliente, R) -> Identifica que estafeta realizou a entrega a determinado cliente.
+findClientesServidosPorEstafeta(IdEstafeta, Answer) -> Identifica os clientes servidos por determinado estafeta.
+bestZonas(Top1, Top2, Top3) -> Identifica as zonas com maior volume de entregas.
+calcularMediaSatisfacaoEstafeta(IdEstafeta, Answer) -> Calcula a classificacao media de um estafeta.
+nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) -> Calcula o numero de entregas realizadas pelos diferentes meios de transporte,num determinado intervalo de tempo.
+pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) -> Calcula o peso total transportado num determinado dia.
+").
 % mudar esta parte
-ajuda(encomenda, "Usar a funcao createEncomenda() com os parâmetros: 
-                Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos sendo os últimos 3 parâmetros o prazo").
+ajuda(encomenda, "Usar a funcao createEncomenda() com os parametros: 
+                Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos sendo os ultimos 3 parametros o prazo").
 
-ajuda(estafeta, "Usar a funcao createEstafeta() com os parâmetros: 
+ajuda(estafeta, "Usar a funcao createEstafeta() com os parametros: 
                 Id").
 
-ajuda(cliente, "Usar a funcao createCliente() com os parâmetros: 
+ajuda(cliente, "Usar a funcao createCliente() com os parametros: 
                 Id").
 
 help(X) :- ajuda(X, Y), write(Y). % tentar tirar o true que aparece depois
@@ -146,7 +159,7 @@ createCliente(Id) :- \+cliente(Id, _), assert(cliente(Id, 0)), write("Cliente ad
 
 
                 %fazer os teste de id da encomenda e assim antes, esxiste id cliente, estafeta e assim
-createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos) :- 
+createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos, DataTime) :- 
                 encomenda(_, Id, _, _, _, _, _), write("Encomenda já existente"), !;
                 \+cliente(IdCliente, _), write("Cliente não existente"), !;
                 Peso > 100, write("Nenhum veiculo suporta a entrega da encomenda"), !;
@@ -154,6 +167,7 @@ createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Min
                 Volume < 0, write("Volume impossível"), !;
                 (Dias < 0; Horas < 0; Minutos < 0), write("Prazo impossível"), !; 
                 assert(encomenda(registada, Id, IdCliente, Peso, Volume, Freguesia/Morada, date(0,0,Dias)/time(Horas,Minutos,0))),
+                assert(entrega(Id,empty,empty,DataTime,empty/empty,empty)),
                 addCliente(IdCliente).
                     
                     
@@ -352,6 +366,21 @@ checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
 
 
 % --------------------------------------- calcular o número de encomendas entregues e não entregues pela Green Distribution, num determinado período de tempo;
+
+numEncomendas(DateI/TimeI,DateF/TimeF,Answer) :- findall(1 ,entrega(_,_,_,_,empty/empty,_), Bag),
+                                          length(Bag,NrNaoEntregue),
+                                          findall(DataFim,(entrega(_,_,_,_,Data/Time,_), Data/Time =\= empty/empty,
+                                          checkTimeInterval(Data,Time,DateI,TimeI,DateF,TimeF)),Answer).
+                                
+
+
+remove(_,[],[]).
+remove(A, [A|B], L) :- remove(A, B, L),!.
+remove(A, [B|C], [B|E]) :- remove(A, C, E).
+
+
+
+
 
 % ---------------------------------------
 
