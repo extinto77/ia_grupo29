@@ -150,7 +150,7 @@ adicionaParEstafeta([(H,H2)|T1],L,[(H,H2)|T3]) :- adicionaParEstafeta(T1,L,T3).
 ajuda(geral, 
 "\ncreateEstafeta(Id) -> Adiciona um estafeta a lista de estafetas. 
 createCliente(Id) -> Adiciona um cliente a lista de clientes.
-createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos) -> Adiciona uma encomenda a lista de encomendas.
+createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos, Date/Time) -> Adiciona uma encomenda a lista de encomendas.
 createEntrega(IdEncomenda, IdEstafeta, Veiculo, DataI, TimeI, Date ,Time) -> Adiciona uma encomenda a lista de Entregas.
 entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) -> Realiza a entrega de uma encomenda.
 findEstafetasPorVeiculo(Veiculo, Bag) -> Devolve os estafetas que usaram determinado veiculo.
@@ -232,17 +232,9 @@ entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
 
 %
 
-% fazer
-% calculaPreco(Veiculo, Distancia, TempoReserva, Valor) :- Valor is 4.
 
 
-
-
-
-% % encomenda(Estado, Id, IdClinet, Peso, Volume, Freguesia/Morada, prazo)
-% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
-% --------------------------------------- identificar o estafeta que utilizou mais vezes um meio de transporte mais ecológico; só falta testar
-
+% -------- identificar o estafeta que utilizou mais vezes um meio de transporte mais ecológico;
 
 maisEcologico(Answer) :-% se for só bicicleta cagar no 'Veiculo'
             findall((IdEst,Peso,Veiculo),
@@ -266,7 +258,7 @@ checkEcologica(Peso,carro,R) :- (Peso > 20) -> R is 3 ; (Peso > 5) -> R is 6 ; R
 % ---------------------------------------
 
 
-% --------------------------------------- identificar que estafetas entregaram determinada(s) encomenda(s) a um determinado cliente;
+% ----------- identificar que estafetas entregaram determinada(s) encomenda(s) a um determinado cliente;
 
 trackEncomenda(IdCliente, R) :- findall(IdEnc, encomenda(entregue,IdEnc,IdCliente,_,_,_,_),Aux),
                                 idEncPorEstafeta(Aux,[],R).
@@ -291,7 +283,7 @@ checkClienteEnc(IdC,[_|T],Acc,R) :- checkClienteEnc(IdC,T,Acc,R).
 % ---------------------------------------
 
 
-% --------------------------------------- identificar os clientes servidos por um determinado estafeta;
+% ------------- identificar os clientes servidos por um determinado estafeta;
 findClientesServidosPorEstafeta(IdEstafeta, Answer) :- 
                 estafeta(IdEstafeta, Nr, _), Nr == 0, Answer = [], write(IdEstafeta),write(" ainda não realizou entregas"), !;
                 findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, _), Aux),
@@ -305,7 +297,7 @@ clientesPorEncomenda([_|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
 % ---------------------------------------
 
 %quanto maior o prazo menor o preco, o peso influencia mais o preço do que o volume
-% --------------------------------------- calcular o valor faturado pela Green Distribution num determinado dia;
+% ----------------- calcular o valor faturado pela Green Distribution num determinado dia;
 calcFaturacao(Dia/Mes/Ano,R) :- findall( Preco, 
                         (encomenda(entregue,IdEnc,_,_,_,_,_),
                         entrega(IdEnc,_,_,_,date(Ano,Mes,Dia)/_,_),   
@@ -322,7 +314,8 @@ somaLista([H|T],R) :- somaLista(T,Resto), R is Resto + H.
 
 % ---------------------------------------
 
-% --------------------------------------- identificar quais as zonas (e.g., rua ou freguesia) com maior volume de entregas por parte da Green Distribution;
+% -------------- identificar quais as zonas (e.g., rua ou freguesia) com maior volume de entregas por parte da Green Distribution;
+% refazer esta !!!!!!
 bestZonas(Top1, Top2, Top3) :- findall(Freguesia, encomenda(_, _, _, _, _, Freguesia/_, _), Bag),
                 calculaTop(Bag, Top1, Top2, Top3).
 
@@ -352,7 +345,7 @@ counteach(L1,L,[H|T],R) :- count(L,H,Count), append(L1,[Count],L2), counteach(L2
 
 % ---------------------------------------
 
-% --------------------------------------- calcular a classificação media de satisfação de cliente para um determinado estafeta;
+% ----------- calcular a classificação media de satisfação de cliente para um determinado estafeta;
 calcularMediaSatisfacaoEstafeta(IdEstafeta, Answer) :- 
                     estafeta(IdEstafeta, Nr, _), Nr =:= 0, Answer = "O estafeta ainda não realizou entregas", !;
                     findall(Avaliacao, entrega( _, IdEstafeta, _, _, _, Avaliacao), X), 
@@ -373,7 +366,7 @@ averageList( List, Avg ) :-
         Avg is Sum / Length.
 % ---------------------------------------
 
-% --------------------------------------- identificar o número total de entregas pelos diferentes meios de transporte,num determinado intervalo de tempo;
+% ---------- identificar o número total de entregas pelos diferentes meios de transporte,num determinado intervalo de tempo;
 nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :- 
                                         findall(Veiculo,
                                         (entrega(_,_,Veiculo,_,D/H,_),
@@ -392,7 +385,7 @@ checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
 % ---------------------------------------
      
 
-% --------------------------------------- identificar o número total de entregas pelos estafetas, num determinado intervalo de tempo;
+% ----------- identificar o número total de entregas pelos estafetas, num determinado intervalo de tempo;
 nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
                                         findall(IdEst, 
                                                 (entrega(_,IdEst,_,_,D/H,_),
@@ -401,7 +394,7 @@ nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
 % ---------------------------------------
 
 
-% --------------------------------------- calcular o número de encomendas entregues e não entregues pela Green Distribution, num determinado período de tempo;
+% --------- calcular o número de encomendas entregues e não entregues pela Green Distribution, num determinado período de tempo;
 % dizer que encomendas nao entregues para trás não contam.
 numEncomendas(DateI, TimeI, DateF, TimeF,Answer) :- findall(1 ,(entrega(_,_,_,Data1/Time1,empty/empty,_),
                                                                 checkTimeInterval(Data1,Time1,DateI,TimeI,DateF,TimeF)), 
@@ -414,7 +407,7 @@ numEncomendas(DateI, TimeI, DateF, TimeF,Answer) :- findall(1 ,(entrega(_,_,_,Da
 % ---------------------------------------
 
 
-% --------------------------------------- calcular o peso total transportado por estafeta num determinado dia.
+% ------ calcular o peso total transportado por estafeta num determinado dia.
 addCliente(Id) :- cliente(Id,Nr), NewNr is Nr + 1, replace_existing_fact(cliente(Id,Nr),cliente(Id,NewNr)).
 
 pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) :- findall(IdEnc,
