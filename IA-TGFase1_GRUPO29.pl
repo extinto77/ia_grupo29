@@ -51,6 +51,10 @@ veiculo(bicicleta, 10, 5). %inserir preço por km ?? ou só na função do custo
 veiculo(mota, 35, 20).
 veiculo(carro, 25, 100). 
 
+preco(bicicleta,0.5).
+preco(mota,1).
+preco(carro,1.5).
+
 % ----------- cliente(id, nrEncomendas) /2
 cliente(daniel, 3).
 cliente(abacao, 3).
@@ -73,7 +77,7 @@ encomenda(entregue, joelhos, abacao, 80 ,30, escordo/rua_ponte,date(0,0,0)/time(
 % ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
 entrega(cadeira_gayming, caldas, bicicleta, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 entrega(cadeira, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(folha, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
+entrega(folha, ctt, bicicleta, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 entrega(portal, joao, carro, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 entrega(sal, caldas, carro, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
 entrega(joelhos, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
@@ -86,7 +90,7 @@ entrega(joelhos, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,
 +estafeta(Id, A, B) :: (solucoes( Id , estafeta(Id, A, B) ,S ),
                         length( S,N ), N == 1 ).
         
-+estafeta(Id, A, B) :: (solucoes( A , (estafeta(Id, A, B),A >=0) ,S ),
++estafeta(Id, A, B) :: (solucoes( A , (estafeta(Id, A, B),A >=0) ,S ),  
                         length(S,N), N == 1).
 
 
@@ -196,11 +200,11 @@ entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
 
 
 
-
+% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
 
 % --------------------------------------- identificar o estafeta que utilizou mais vezes um meio de transporte mais ecológico; só falta testar
 findEstafetasPorVeiculo(Veiculo, Bag) :-
-                        setof(IdEstafeta, entrega(_, IdEstafeta, Veiculo, _, _, _), Bag). % Bag possui lista de estafetas que usaram o veiculo em analise
+                        findall(IdEstafeta, entrega(_, IdEstafeta, Veiculo,_, _, _), Bag).%,sort(Aux,Bag). % Bag possui lista de estafetas que usaram o veiculo em analise
 
 estafetaQuantasVezesVeiculo(Veiculo, Estafeta, Nr):-
                         findall(arroz, entrega(_, Estafeta, Veiculo, _, _, _), Bag), length(Bag, Nr).  % DUVIDA : é assim que se encontra todos??
@@ -223,8 +227,10 @@ trackEncomenda(IdCliente, R) :- findall(IdEnc, encomenda(entregue,IdEnc,IdClient
                                 idEncPorEstafeta(Aux,[],R).
 
 idEncPorEstafeta([],R,R).
-idEncPorEstafeta([IdEnc|T],L,R) :- entrega(IdEnc,IdEst,_,_,_,_), \+member((IdEst,_),L), append([(IdEst,[IdEnc])],L,L2), idEncPorEstafeta(T,L2,R).
-idEncPorEstafeta([IdEnc|T],L,R) :- entrega(IdEnc,IdEst,_,_,_,_), adicionaElemento(IdEnc,IdEst,L,[],L2), idEncPorEstafeta(T,L2,R).
+idEncPorEstafeta([IdEnc|T],L,R) :- entrega(IdEnc,IdEst,_,_,_,_), \+member((IdEst,_),L), 
+                                        append([(IdEst,[IdEnc])],L,L2), idEncPorEstafeta(T,L2,R).
+idEncPorEstafeta([IdEnc|T],L,R) :- entrega(IdEnc,IdEst,_,_,_,_), adicionaElemento(IdEnc,IdEst,L,[],L2), 
+                                        idEncPorEstafeta(T,L2,R).
 
 adicionaElemento(IdEnc,IdEst,[(IdEst,List)|T],Acc,R) :- append([IdEnc],List,List2), append([(IdEst,List2)|T],Acc,R).
 adicionaElemento(IdEnc,IdEst,[H|T],Acc,R) :- append([H],Acc,Acc2), adicionaElemento(IdEnc,IdEst,T,Acc2,R).
@@ -255,11 +261,22 @@ clientesPorEncomenda([_|T],L,Answer) :- clientesPorEncomenda(T,L,Answer).
 
 
 % --------------------------------------- calcular o valor faturado pela Green Distribution num determinado dia;
+calcFaturacao(Dia/Mes/Ano,R) :- findall( Preco, 
+                        (encomenda(entregue,IdEnc,_,_,_,_,_),
+                        entrega(IdEnc,_,_,_,date(Ano,Mes,Dia)/_,_),   
+                        calcPreco(IdEnc,Preco)), S),
+                        somaLista(S,R).
+
+calcPreco(IdEnc,Preco) :- encomenda(_,IdEnc,_,Peso,Volume,_,Dp/Tp), entrega(IdEnc,_,Veiculo,_,_,_), 
+                          preco(Veiculo,Pv), timeElapsed(date(0,0,0),time(0,0,0),Dp,Tp,Aux),
+                          Preco is (Pv*(Peso*0.7+Volume*0.3))/(Aux+1).
+
+somaLista([],0).
+somaLista([H|T],R) :- somaLista(T,Resto), R is Resto + H. 
 
 % ---------------------------------------
 
 
-% ----------- encomenda(estado, id, idCliente, idEstafeta, peso, volume, freguesia, morada, prazo) /9
 % --------------------------------------- identificar quais as zonas (e.g., rua ou freguesia) com maior volume de entregas por parte da Green Distribution;
 bestZonas(Top1, Top2, Top3) :- findall(Freguesia, encomenda(_, _, _, _, _, Freguesia/_, _), Bag),
                 calculaTop(Bag, Top1, Top2, Top3).
@@ -287,17 +304,6 @@ countall(List,Count) :-
 
 counteach(L1,_,[],L1).
 counteach(L1,L,[H|T],R) :- count(L,H,Count), append(L1,[Count],L2), counteach(L2,L,T,R).
-
-
-
-%count([],_,0).
-%count([Elem|Tail],Elem,Y):- count(Tail,Elem,Z), Y is 1+Z.
-%count([Elem1|Tail],Elem,Z):- Elem1\=Elem,count(Tail,Elem,Z).
-
-%countall(List,Elem,Count) :-
-%        sort(List,List1),
-%        member(Elem,List1),
-%        count(List,Elem,Count).
 
 % ---------------------------------------
 
@@ -332,7 +338,7 @@ nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
                                         (entrega(_,_,Veiculo,_,D/H,_),
                                         checkTimeInterval(D,H,date(AnoI,MesI,DiaI),time(Hi,Mi,0),date(AnoF,MesF,DiaF),time(Hf,Mf,0))),
                                         Aux), listToPairList(Aux,[],R).
-% [mota,mota,carro,bicicleta,carro,mota]
+
 listToPairList([],R,R).
 listToPairList([H|T],L,R) :- \+member((H,_),L), append([(H,1)],L,L2), listToPairList(T,L2,R).
 listToPairList([H|T],L,R) :-  incrementaPar(H,L,[],Aux), listToPairList(T,Aux,R).
@@ -343,8 +349,8 @@ incrementaPar(H,[(H2,Nr)|T],L,R) :- append([(H2,Nr)],L,Aux),incrementaPar(H,T,Au
 checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
                                        timeElapsed(D,H,Df,Hf,Res2), Res2 >= 0.
 % ---------------------------------------
+     
 
-% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
 % --------------------------------------- identificar o número total de entregas pelos estafetas, num determinado intervalo de tempo;
 nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
                                         findall(IdEst, 
@@ -355,7 +361,15 @@ nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
 
 
 % --------------------------------------- calcular o número de encomendas entregues e não entregues pela Green Distribution, num determinado período de tempo;
-
+% dizer que encomendas nao entregues para trás não contam.
+numEncomendas(DateI, TimeI, DateF, TimeF,Answer) :- findall(1 ,(entrega(_,_,_,Data1/Time1,empty/empty,_),
+                                                                checkTimeInterval(Data1,Time1,DateI,TimeI,DateF,TimeF)), 
+                                                        Bag1),
+                                          length(Bag1, NrNaoEntregue),
+                                          findall(Data/Time,(entrega(_,_,_,_,Data/Time,_), \+(Data = empty), \+(Time = empty),
+                                          checkTimeInterval(Data,Time,DateI,TimeI,DateF,TimeF)),Bag2),
+                                          length(Bag2, NrEntregue), 
+                                        Answer = [(entregues, NrEntregue), (nao_entregues, NrNaoEntregue)].
 % ---------------------------------------
 
 
