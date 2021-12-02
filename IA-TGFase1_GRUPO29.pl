@@ -29,8 +29,8 @@ mes(12, dezembro, 31).
 
 
 
-validateTime(H1, M1, S1) :-
-        H1<24, H1>=0, M1<60, M1>=0, S1<60, S1>=0.
+validateTime(H, M, S) :-
+        H<24, H>=0, M<60, M>=0, S<60, S>=0.
 
 verBissexto(Ano, Max) :-
         (Mod1 is Ano mod 4, Mod2 is Ano mod 100, Mod3 is Ano mod 400) ,
@@ -38,8 +38,8 @@ verBissexto(Ano, Max) :-
         Max is 28.
 
 validateDate(A, 2, D) :-
-        D>0, verBissexto(A, Max), D=<Max, !. % é preciso o '!' ??
-validateDate(A, M, D) :-
+        D>0, verBissexto(A, Max), D=<Max, !.
+validateDate(_, M, D) :-
         M>0, M=<12, mes(M, _, Max), D>0, D=<Max.
 
 
@@ -142,11 +142,6 @@ insercao(Termo) :- retract(Termo), !, fail.
 teste([]).
 teste([R|LR]) :- R, teste(LR).
 
-adicionaParEstafeta( [] , L , [L]).
-adicionaParEstafeta( [(Est,L)|T], (Est, Enc), [(Est,L2)|T] ) :- append(L,[Enc],L2).
-adicionaParEstafeta([(H,H2)|T1],L,[(H,H2)|T3]) :- adicionaParEstafeta(T1,L,T3).
-
-
 ajuda(geral, 
 "\ncreateEstafeta(Id) -> Adiciona um estafeta a lista de estafetas. 
 createCliente(Id) -> Adiciona um cliente a lista de clientes.
@@ -186,23 +181,24 @@ createCliente(Id) :- \+cliente(Id, _), assert(cliente(Id, 0)), write("Cliente ad
 
 
 
-                %fazer os teste de id da encomenda e assim antes, esxiste id cliente, estafeta e assim
-createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos, DataTime) :- 
+%fazer os teste de id da encomenda e assim antes, esxiste id cliente, estafeta e assim
+createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos, date(A1, M1, D1)/time(H2, M2, S2)) :- 
                 encomenda(_, Id, _, _, _, _, _), write("Encomenda já existente"), !;
                 \+cliente(IdCliente, _), write("Cliente não existente"), !;
                 Peso > 100, write("Nenhum veiculo suporta a entrega da encomenda"), !;
-                Peso < 0, write("Peso impossível"), !;
-                Volume < 0, write("Volume impossível"), !;
-                (Dias < 0; Horas < 0; Minutos < 0), write("Prazo impossível"), !; 
+                Peso < 0, write("Peso inválido"), !;
+                Volume < 0, write("Volume inválido"), !;
+                (Dias < 0; Horas < 0; Minutos < 0), write("Prazo impossível"), !;
+                \+validateDate(A1, M1, D1), \+validateTime(H2, M2, S2), write("Data ou horas de inicio erradas"), !;
+                
                 assert(encomenda(registada, Id, IdCliente, Peso, Volume, Freguesia/Morada, date(0,0,Dias)/time(Horas,Minutos,0))),
-                assert(entrega(Id,empty,empty,DataTime,empty/empty,empty)),
+                assert(entrega(Id,empty,empty,date(A, M, D)/time(H, M, S),empty/empty,empty)),
                 addCliente(IdCliente).
                     
                     
 
 
-% só deve ser feita pelo sistema da empresa, é preciso certificar outra vez os campos??
-createEntrega(IdEncomenda, IdEstafeta, Veiculo, DateI, TimeI, Date ,Time) :-
+createEntrega(IdEncomenda, IdEstafeta, Veiculo) :-
                 \+encomenda(_, IdEncomenda, _, _, _, _, _), write("Encomenda não existente"), !;
                 \+estafeta(IdEstafeta, _, _), write("Estafeta não existente"), !;
                 encomenda(entregue, IdEncomenda, _, _, _, _, _), write("A encomenda já foi entregue"), !;
@@ -210,17 +206,21 @@ createEntrega(IdEncomenda, IdEstafeta, Veiculo, DateI, TimeI, Date ,Time) :-
                 
                 encomenda(_, IdEncomenda, _, _, Peso, _, _), veiculo(Veiculo, _, Max), 
                             Max < Peso, write("Veículo selecionado não suporta carga da encomenda"), !;
+
                 % adicionar info aos outros factos !!!!
                 replace_existing_fact(encomenda(registada, IdEncomenda, IdCliente, Peso, Volume, Freguesia/Morada, Date/Time), 
-                                    encomenda(registada, IdEncomenda, IdCliente, Peso, Volume, Freguesia/Morada, Date/Time)), 
-                        assert(entrega(IdEncomenda, IdEstafeta, Veiculo, DateI/TimeI, empty, -1 )), 
-                        write("Entrega registada").
+                                      encomenda(distribuicao, IdEncomenda, IdCliente, Peso, Volume, Freguesia/Morada, Date/Time)), 
+                replace_existing_fact(entrega(IdEncomenda, _, _, DateI/TimeI, InfoFim, Aval ),
+                                      entrega(IdEncomenda, IdEstafeta, Veiculo, InfoFim, Aval )),
+                % add potencial -> atribuicao                   
+                write("Entrega registada").
 
-% encomenda(Estado, Id, Peso, Volume, Freguesia/Morada, prazo)
 entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
         \+encomenda(_, IdEncomenda, _, _, _, _, _), write("Encomenda não existente"), !;
         encomenda(entregue, IdEncomenda, _, _, _, _, _), write("A encomenda já foi entregue"), !;
         encomenda(registada, IdEncomenda, _, _, _, _, _), write("A encomenda ainda não está em distribuição"), !;
+        validateDate(). % continuar
+        
         replace_existing_fact(encomenda(distribuicao, IdEncomenda, IdCliente, Peso, Volume, ADDRS, Prazo), 
                                 encomenda(entregue, IdEncomenda, IdCliente, Peso, Volume, ADDRS, Prazo)), 
         replace_existing_fact(entrega(IdEncomenda, IdEstafeta, Veiculo1, DataInicio1, _, _), 
@@ -236,22 +236,41 @@ entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
 
 % -------- identificar o estafeta que utilizou mais vezes um meio de transporte mais ecológico;
 
-maisEcologico(Answer) :-% se for só bicicleta cagar no 'Veiculo'
-            findall((IdEst,Peso,Veiculo),
-            (entrega(IdEnc,IdEst,Veiculo,_,_,_),encomenda(entregue,IdEnc,_,Peso,_,_,_)),
-            Bag),setof(Id,estafeta(Id,_,_),BagE), 
+maisEcologico(Answer) :-
+            findall((IdEst,R),
+            (entrega(IdEnc,IdEst,Veiculo,_,_,_),
+            encomenda(entregue,IdEnc,_,Peso,_,_,_),
+            checkEcologica(Peso,Veiculo,R)),
+            Bag), organizaDuplo(Bag,[],Res), getHead(Res,IdAux,MinAux),getTail(Res,Tail),
+            convertDuplo(Tail,IdAux,MinAux,Answer).
 
-% [(caldas,5,carro),(caldas,20,mota)] , caldas,
-organizar([],_,[]).
-%organizar([(A,_,_)|T1],IdEst,X) :- \+(A = IdEst), organizar(T1,IdEst,X).
-organizar([(IdEst,P,V)|T1],IdEst,X) :- checkEcologica(P,V,Aux), organizar(T1,IdEst,[Aux|X]). 
-organizar([_|T1],IdEst,X) :- organizar(T1,IdEst,X).
+
+getTail([_|T],T).
+
+getHead([(IdEnc,L)|_],IdEnc,Min) :- mediaEcologia(L,Min).    
+
+convertDuplo([],IdEnc,_,IdEnc).
+convertDuplo([(IdEnc,List)|T],IdEncMin,Min,R) :- 
+                                mediaEcologia(List,X), 
+                                ((X < Min) -> convertDuplo(T,IdEnc,X,R);
+                                (X > Min) -> convertDuplo(T,IdEncMin,Min,R);
+                                (is_list(IdEncMin) -> append([IdEnc],IdEncMin,New);
+                                                      append([IdEnc],[IdEncMin],New)), 
+                                convertDuplo(T,New,Min,R)).
+
+
+
+organizaDuplo([],Acc,Acc).
+organizaDuplo([(IdEnc,Eco)|T],Acc,R) :- \+member((IdEnc,_),Acc), 
+                                        append([(IdEnc,[Eco])],Acc,Acc2), 
+                                        organizaDuplo(T,Acc2,R).  
+organizaDuplo([(IdEnc,Eco)|T],Acc,R) :- adicionaElemento(Eco,IdEnc,Acc,[],L2), organizaDuplo(T,L2,R).
 
 
 
 mediaEcologia(L,R) :- somaLista(L,Aux), length(L,Size), R is Aux/Size. 
 
-checkEcologica(Peso,bicicleta,1). 
+checkEcologica(_,bicicleta,1). 
 checkEcologica(Peso,mota,R) :- (Peso > 5) -> R is 2 ; R is 4.
 checkEcologica(Peso,carro,R) :- (Peso > 20) -> R is 3 ; (Peso > 5) -> R is 6 ; R is 9.      
 
