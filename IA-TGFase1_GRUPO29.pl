@@ -1,71 +1,12 @@
 
+:- [base_conhecimento].
+
 :- op( 900,xfy,'::' ).
 
-%:- dynamic(veiculo/3).
 :- dynamic(estafeta/3).
 :- dynamic(cliente/2).
 :- dynamic(encomenda/7).
 :- dynamic(entrega/6).
-
-
-
-%escrever factos de estafetas, clientes e encomendas para termos já alguns na BD
-
-% Factos:
-
-
-
-% ---------------------------------------------------------------------------------------------------------             
-% ---------- BASE CONHECIMENTO
-% ---------------------------------------------------------------------------------------------------------             
-
-% ---------- mes(mes, dias maximo), fevereiro pode ser bissexto
-mes(1, 31).
-mes(3, 31).
-mes(4, 30).
-mes(5, 31).
-mes(6, 30).
-mes(7, 31).
-mes(8, 31).
-mes(9, 30).
-mes(10, 31).
-mes(11, 30).
-mes(12, 31).
-
-% ----------- veiculo(tipo, velocidadeMedia, cargaMax)
-veiculo(bicicleta, 10, 5).
-veiculo(mota, 35, 20).
-veiculo(carro, 25, 100). 
-
-preco(bicicleta,0.5).
-preco(mota,1).
-preco(carro,1.5).
-
-% ----------- cliente(id, nrEncomendas) /2
-cliente(daniel, 3).
-cliente(abacao, 3).
-
-% ----------- estafeta(id, nrEntregas, avaliacao) /3
-estafeta(joao, 1, 4.4).
-estafeta(caldas, 3, 4.4).
-estafeta(ctt,2,4.4).
-
-% ----------- encomenda(Estado, Id, IdClinet, Peso, Volume, Freguesia/Morada, prazo) /7
-encomenda(entregue, cadeira_gayming, abacao, 1, 10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
-encomenda(entregue, cadeira, daniel, 2 ,30, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
-encomenda(entregue, folha, daniel, 50 ,10, landim/rua_ponte,date(0,0,0)/time(12,0,0)).
-encomenda(entregue, portal, daniel, 16 ,30, escordo/rua_ponte,date(0,0,1)/time(12,0,0)).
-encomenda(entregue, sal, abacao, 2 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
-encomenda(entregue, joelhos, abacao, 80 ,30, escordo/rua_ponte,date(0,0,0)/time(12,0,0)).
-% 
-% ----------- entrega(idEncomenda, idEstafeta, veiculo, DataInicio, DataFim, avaliacao) /6
-entrega(cadeira_gayming, caldas, bicicleta, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(cadeira, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(folha, ctt, bicicleta, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(portal, joao, carro, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(sal, caldas, carro, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-entrega(joelhos, ctt, mota, date(2021,10,4)/time(0,0,0), date(2021,10,5)/time(0,0,0), 4.4).
-
 
 
 
@@ -123,20 +64,25 @@ rounding(Val, Int, Decimal) :-
 % ---------- AJUDA
 % ---------------------------------------------------------------------------------------------------------             
 ajuda(geral, 
-        "\ncreateEstafeta(Id) -> Adiciona um estafeta a lista de estafetas. 
+        "\tcreateEstafeta(Id) -> Adiciona um estafeta a lista de estafetas. 
         createCliente(Id) -> Adiciona um cliente a lista de clientes.
         createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos, Date/Time) -> Adiciona uma encomenda a lista de encomendas.
-        createEntrega(IdEncomenda, IdEstafeta, Veiculo, DataI, TimeI, Date ,Time) -> Adiciona uma encomenda a lista de Entregas.
+        createEntrega(IdEncomenda, IdEstafeta, Veiculo) -> Adiciona uma encomenda a lista de Entregas.
         entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) -> Realiza a entrega de uma encomenda.
-        findEstafetasPorVeiculo(Veiculo, Bag) -> Devolve os estafetas que usaram determinado veiculo.
-        trackEncomenda(IdCliente, R) -> Identifica que estafeta realizou a entrega a determinado cliente.
-        findClientesServidosPorEstafeta(IdEstafeta, Answer) -> Identifica os clientes servidos por determinado estafeta.
-        bestZonas(Top1, Top2, Top3) -> Identifica as zonas com maior volume de entregas.
-        calcularMediaSatisfacaoEstafeta(IdEstafeta, Answer) -> Calcula a classificacao media de um estafeta.
-        nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) -> Calcula o numero de entregas realizadas pelos diferentes meios de transporte,num determinado intervalo de tempo.
-        pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) -> Calcula o peso total transportado num determinado dia.
+        query1(Answer) -> Identifica o estafeta que mais utilizou meios de transporte mais ecologicos.
+        query2(Cliente, R) -> Identifica que estafeta realizou a entrega a determinado cliente.
+        query3(IdEstafeta, Answer) -> Identifica os clientes servidos por determinado estafeta.
+        query4(Dia, Mes, Ano, Answer) -> Calcula o valor faturado pela Green Distribution num determinado dia.
+        query5(Tag, Top1, Top2, Top3) -> Identifica as zonas com maior volume de entregas.
+        query6(IdEstafeta, Answer) -> Calcula a classificacao media de um estafeta.
+        query7(DiaI, MesI, AnoI, Hi, Mi, DiaF, MesF, AnoF, Hf, Mf, R) -> Calcula o numero de entregas realizadas pelos diferentes meios de transporte,num determinado intervalo de tempo.
+        query8(DiaI, MesI, AnoI, Hi, Mi, DiaF, MesF, AnoF, Hf, Mf, R) -> Calcula o numero de entregas realizadas pelos diferentes estafetas, num determinado intervalo de tempo.
+        query9(DiaI, MesI, AnoI, Hi, Mi, DiaF, MesF, AnoF, Hf, Mf, R) -> Calcula o numero de encomendass entregues e nao entregues pela Green Distribution, num determinado intervalo de tempo.
+        query10(IdEstafeta, Dia/Mes/Ano, Answer) -> Calcula o peso total transportado num determinado dia.
         ").
-% mudar esta parte
+
+ajuda(entrega, "Usar a funcao createEntrega() com os paramentros:
+                IdEncomenda, IdEstafeta, Veiculo").
 
 ajuda(encomenda, "Usar a funcao createEncomenda() com os parametros: 
                 Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos sendo os ultimos 3 parametros o prazo").
@@ -171,18 +117,19 @@ createCliente(Id) :- \+cliente(Id, _), assert(cliente(Id, 0)), write("Cliente ad
 
 
 %fazer os teste de id da encomenda e assim antes, esxiste id cliente, estafeta e assim
-createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos, date(A1, M1, D1)/time(H2, M2, S2)) :- 
+createEncomenda(Id, IdCliente, Peso, Volume, Freguesia, Morada, Dias, Horas, Minutos, date(A, M, D)/time(H2, M2, S2)) :- 
                 encomenda(_, Id, _, _, _, _, _), write("Encomenda já existente"), !;
                 \+cliente(IdCliente, _), write("Cliente não existente"), !;
                 Peso > 100, write("Nenhum veiculo suporta a entrega da encomenda"), !;
                 Peso < 0, write("Peso inválido"), !;
                 Volume < 0, write("Volume inválido"), !;
                 (Dias < 0; Horas < 0; Minutos < 0), write("Prazo impossível"), !;
-                \+validateDate(A1, M1, D1), \+validateTime(H2, M2, S2), write("Data ou horas de Inicio erradas"), !;
+                \+validateDate(A, M, D), \+validateTime(H2, M2, S2), write("Data ou horas de Inicio erradas"), !;
                 
                 assert(encomenda(registada, Id, IdCliente, Peso, Volume, Freguesia/Morada, date(0,0,Dias)/time(Horas,Minutos,0))),
-                assert(entrega(Id,empty,empty,date(A, M, D)/time(H, M, S),empty/empty,empty)),
-                addCliente(IdCliente).
+                assert(entrega(Id,empty,empty,date(A, M, D)/time(H2, M2, S2),empty/empty,empty)),
+                addCliente(IdCliente),
+                write("Encomenda registada").
                     
 addCliente(Id) :- cliente(Id,Nr), NewNr is Nr + 1, replace_existing_fact(cliente(Id,Nr),cliente(Id,NewNr)).
               
@@ -198,12 +145,12 @@ createEntrega(IdEncomenda, IdEstafeta, Veiculo) :-
                             Max < Peso, write("Veículo selecionado não suporta carga da encomenda"), !;
 
                 % adicionar info aos outros factos !!!!
-                replace_existing_fact(encomenda(registada, IdEncomenda, IdCliente, Peso, Volume, Freguesia/Morada, Date/Time), 
-                                      encomenda(distribuicao, IdEncomenda, IdCliente, Peso, Volume, Freguesia/Morada, Date/Time)), 
-                replace_existing_fact(entrega(IdEncomenda, _, _, DateI/TimeI, InfoFim, Aval ),
-                entrega(IdEncomenda, IdEstafeta, Veiculo, InfoFim, Aval )),
+                replace_existing_fact(encomenda(registada,    IdEncomenda, IdCliente, Peso, Volume, ADDR, InfoPrazo), 
+                                      encomenda(distribuicao, IdEncomenda, IdCliente, Peso, Volume, ADDR, InfoPrazo)), 
+                replace_existing_fact(entrega(IdEncomenda, _,          _,       InfoInicio, InfoFim, Aval )  ,
+                                      entrega(IdEncomenda, IdEstafeta, Veiculo, InfoInicio, InfoFim, Aval ) ),
                 % add potencial -> atribuicao                   
-                write("Entrega registada").
+                write("Entrega registada, a encomenda ira ser distribuida").
         
 entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
                 \+encomenda(_, IdEncomenda, _, _, _, _, _), write("Encomenda não existente"), !;
@@ -213,24 +160,27 @@ entregarEncomenda(IdEncomenda, Dia, Mes, Ano, Horas, Minutos, Avaliacao) :-
                 (Avaliacao<0; Avaliacao>5), write("Avaliacao invalida"), !;
         
                 replace_existing_fact(encomenda(distribuicao, IdEncomenda, IdCliente, Peso, Volume, ADDRS, Prazo), 
-                                      encomenda(entregue, IdEncomenda, IdCliente, Peso, Volume, ADDRS, Prazo)), 
-                replace_existing_fact(entrega(IdEncomenda, IdEstafeta, Veiculo1, DataInicio1, _, _), 
-                                      entrega(IdEncomenda, IdEstafeta, Veiculo1, DataInicio1, 
+                                      encomenda(entregue,     IdEncomenda, IdCliente, Peso, Volume, ADDRS, Prazo)), 
+                replace_existing_fact(entrega(IdEncomenda, IdEstafeta, Veiculo, DataInicio, _, _), 
+                                      entrega(IdEncomenda, IdEstafeta, Veiculo, DataInicio, 
                                                                 date(Ano, Mes, Dia)/time(Horas, Minutos, 0), Avaliacao)), 
-                addEstafeta(IdEstafeta, Avaliacao). 
+                addEstafeta(IdEstafeta, Avaliacao),
+                write("Encomenda entregue"). 
                 %ver penalização
                 
                 
-query1(Ans) :- maisEcologico(Ans).
-query2(Cliente, Ans) :- trackEncomenda(Cliente, Ans).
-query3(Estafeta, Ans) :- findClientesServidosPorEstafeta(Estafeta, Ans).
-query4(Dia, Mes, Ano, Ans) :- calcFaturacao(Dia, Mes, Ano, Ans).
-query5(Top1, Top2, Top3) :- bestZonas(Top1, Top2, Top3).
-query6(Estafeta, Ans) :- calcularMediaSatisfacaoEstafeta(Estafeta, Ans).
-query7(AnoI, MesI, DiaI, Hi, Mi, AnoF, MesF, DiaF, Hf, Mf, Ans) :- nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,Ans).
-query8(AnoI, MesI, DiaI, Hi, Mi, AnoF, MesF, DiaF, Hf, Mf, Ans) :- nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,Ans).
-query9(DateI, TimeI, DateF, TimeF,Ans) :- numEncomendas(DateI, TimeI, DateF, TimeF,Ans).
-query10(Estafeta, Ano, Mes, Dia, Ans) :- pesoNumDia(Estafeta, Dia/Mes/Ano, Ans).
+query1(Ans) :-                    maisEcologico(Ans).
+query2(Cliente, Ans) :-           trackEncomenda(Cliente, Ans).
+query3(Estafeta, Ans) :-          findClientesServidosPorEstafeta(Estafeta, Ans).
+query4(Dia, Mes, Ano, Ans) :-     calcFaturacao(Dia, Mes, Ano, Ans).
+query5(Tag, Top1, Top2, Top3) :-  bestZonas(Tag, Top1, Top2, Top3). % tag pode ser freguesia ou rua
+query6(Estafeta, Ans) :-          calcularMediaSatisfacaoEstafeta(Estafeta, Ans).
+query7(DiaI, MesI, AnoI, Hi, Mi, DiaF, MesF, AnoF, Hf, Mf, Ans) :-  nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,Ans).
+query8(DiaI, MesI, AnoI, Hi, Mi, DiaF, MesF, AnoF, Hf, Mf, Ans) :-  nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,Ans).
+query9(DiaI, MesI, AnoI, Hi, Mi, DiaF, MesF, AnoF, Hf, Mf, Ans) :-  numEncomendas(date(AnoI, MesI, DiaI), time(Hi, Mi, 0), 
+                                                                                  date(AnoF, MesF, DiaF), time(Hf, Mf, 0), Ans).
+query10(Estafeta, Dia, Mes, Ano, Ans) :-   pesoNumDia(Estafeta, Dia/Mes/Ano, Ans).
+
 
 % ---------------------------------------------------------------------------------------------------------             
 % -------- identificar o estafeta que utilizou mais vezes um meio de transporte mais ecológico;
@@ -343,26 +293,33 @@ somaLista([H|T],R) :- somaLista(T,Resto), R is Resto + H.
 % ---------------------------------------------------------------------------------------------------------             
 % -------------- identificar quais as zonas (e.g., rua ou freguesia) com maior volume de entregas por parte da Green Distribution;
 % ---------------------------------------------------------------------------------------------------------             
-bestZonas(Top1, Top2, Top3) :- findall(Freguesia, encomenda(_, _, _, _, _, Freguesia/_, _), Bag),
+bestZonas(freguesia, Top1, Top2, Top3) :- findall(Freguesia, encomenda(_, _, _, _, _, Freguesia/_, _), Bag),
                 calculaTop(Bag, Top1, Top2, Top3).
+bestZonas(rua, Top1, Top2, Top3) :- findall(Freguesia/Rua, encomenda(_, _, _, _, _, Freguesia/Rua, _), Bag),
+        calculaTop(Bag, Top1, Top2, Top3).
 
 
 calculaTop(Bag, Top1, Top2, Top3) :-
-                countall(Bag, Count),
-                findTop(Count, Top1, Top2, Top3, 0, 0, 0).
-            
-findTop([], Top1, Top2, Top3, Top1, Top2, Top3).
-findTop([H|T], N1, N2, N3, Top1, Top2, Top3) :- 
-                                (H>Top1) -> findTop(T, N1, N2, N3, H, Top1, Top2); 
-                                (H>Top2) -> findTop(T, N1, N2, N3, Top1, H, Top2);
-                                (H>Top3) -> findTop(T, N1, N2, N3, Top1, Top2, H);
-                                findTop(T, N1, N2, N3, Top1, Top2, Top3).
+                countall(Bag, List, Count),
+                makePair(List, Count, Res),
+                findTop(Res, 0, 0, 0,(null,null,null),Top1, Top2, Top3).
+
+        
+findTop([], _, _, _,(T1,T2,T3),T1, T2, T3).
+findTop([(Name, Val)|T], N1, N2, N3,(T1,T2,T3),Top1, Top2, Top3) :- 
+                (Val>N1) -> findTop(T, Val, N1, N2, (Name,T1,T2), Top1, Top2,Top3); 
+                (Val>N2) -> findTop(T, N1, Val, N2, (T1,Name,T2),Top1, Top2, Top3);
+                (Val>N3) -> findTop(T, N1, N2, Val, (T1,T2,Name),Top1, Top2, Top3);
+                            findTop(T, N1, N2, N3, (T1,T2,T3),Top1, Top2, Top3).
+
+makePair([], [], []).
+makePair([H|T], [Val|TVal], Ans) :- append([(H, Val)], Y, Ans), makePair(T, TVal, Y).
 
 count([],_,0).
 count([Elem|Tail],Elem,Y):- count(Tail,Elem,Z), Y is 1+Z.
 count([Elem1|Tail],Elem,Z):- Elem1\=Elem,count(Tail,Elem,Z).
                 
-countall(List,Count) :-
+countall(List,List1, Count) :-
         sort(List,List1),
         counteach([],List,List1,Count).
 
@@ -377,7 +334,7 @@ counteach(L1,L,[H|T],R) :- count(L,H,Count), append(L1,[Count],L2), counteach(L2
 % ---------------------------------------------------------------------------------------------------------             
 calcularMediaSatisfacaoEstafeta(IdEstafeta, Answer) :- 
                     estafeta(IdEstafeta, Nr, _), Nr =:= 0, Answer = "O estafeta ainda não realizou entregas", !;
-                    findall(Avaliacao, entrega( _, IdEstafeta, _, _, _, Avaliacao), X), 
+                    findall(Avaliacao, (entrega(_, IdEstafeta, _, _, _, Avaliacao), \+(Avaliacao=empty)), X), 
                     validarAvaliacao(X, NewX), averageList(NewX, Val), arredondar(Val, Answer, 2).
 
 
@@ -401,7 +358,7 @@ averageList( List, Avg ) :-
 % ---------------------------------------------------------------------------------------------------------             
 nrEntregasPorTransporte(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :- 
                                         findall(Veiculo,
-                                        (entrega(_,_,Veiculo,_,D/H,_),
+                                        (entrega(_,_,Veiculo,_,D/H,_), \+(D=empty),
                                         checkTimeInterval(D,H,date(AnoI,MesI,DiaI),time(Hi,Mi,0),date(AnoF,MesF,DiaF),time(Hf,Mf,0))),
                                         Aux), listToPairList(Aux,[],R).
 
@@ -423,7 +380,7 @@ checkTimeInterval(D,H, Di,Hi,Df,Hf) :- timeElapsed(D,H,Di,Hi,Res1), Res1 =< 0,
 % ---------------------------------------------------------------------------------------------------------             
 nrEntregasPorEstafeta(DiaI/MesI/AnoI, Hi:Mi, DiaF/MesF/AnoF, Hf:Mf,R) :-
                                         findall(IdEst, 
-                                                (entrega(_,IdEst,_,_,D/H,_),
+                                                (entrega(_,IdEst,_,_,D/H,_), \+(D=empty), 
                                         checkTimeInterval(D,H,date(AnoI,MesI,DiaI),time(Hi,Mi,0),date(AnoF,MesF,DiaF),time(Hf,Mf,0))),
                                         Aux), listToPairList(Aux,[],R).
 % ---------------------------------------
@@ -450,7 +407,7 @@ numEncomendas(DateI, TimeI, DateF, TimeF,Answer) :- findall(1 ,(entrega(_,_,_,Da
 % ------ calcular o peso total transportado por estafeta num determinado dia.
 % ---------------------------------------------------------------------------------------------------------             
 pesoNumDia(IdEstafeta, Dia/Mes/Ano, Answer) :- findall(IdEnc,
-                                                (entrega(IdEnc,IdEstafeta,_,Di/_,Df/_,_), 
+                                                (entrega(IdEnc,IdEstafeta,_,Di/_,Df/_,_), \+(Df=empty),
                                                 dateStamp(Di,date(Ano,Mes,Dia),Dif1), Dif1 >= 0,
                                                 dateStamp(Df,date(Ano,Mes,Dia),Dif2), Dif2 =< 0),
                                                 Ans), calcPesoEnc(Ans,0,Answer).
