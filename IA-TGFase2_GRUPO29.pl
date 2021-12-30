@@ -422,3 +422,206 @@ replace_existing_fact(OldFact, NewFact) :-
     retract(OldFact),
     assert(NewFact).
 
+
+
+% ----------------------------------------------------------------------------------------------------------
+
+% ---------------------------------------------------------------------------------------------------------             
+% ------ FASE 2
+% ---------------------------------------------------------------------------------------------------------             
+
+% ---------Gerar os circuitos de entrega, caso existam, que cubram um determinado território (e.g. rua ou freguesia);
+% ---------Representação dos diversos pontos de entrega em forma de grafo, tendo em conta que apenas se devem ter localizações (rua e/ou freguesia) disponíveis;
+% ---------Identificar quais os circuitos com maior número de entregas (por volume e peso);
+% ---------Comparar circuitos de entrega tendo em conta os indicadores de produtividade;
+% ---------Escolher o circuito mais rápido (usando o critério da distância);
+% ---------Escolher o circuito mais ecológico (usando um critério de tempo);
+
+
+
+
+
+
+
+getTotalPeso([], 0).
+getTotalPeso([encomenda(registada, _, _, Peso, _, _, _)|T], X) :- getTotalPeso(T, Y), X is Y+Peso.
+getTotalPeso([H|T], X) :- getTotalPeso(T, X).
+
+separarVoltas([],L, _).
+separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed) :- 
+                (TotUsed+Peso > 100) -> separarVoltas(T, [L2|L], 0);
+                                        append(IdEnc,L2,L1), separarVoltas(T, [L2|L], TotUsed+Peso).
+
+% makeCircuito(IdEstafeta) :-
+        % findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag),
+        % separarVoltas(Bag, RET),
+        % getTotalPeso(Bag, X).
+        % ((X>100, darSplit, !); (X>20, veiculo é carro ); (X>5, veiculo é mota ); (X>=0, veiculo é bicicleta)),
+        % alterarEstadoParaEmDistribuicao,
+
+        % resolve_aestrela().
+
+
+%---------------------------------pesquisa a estrela 
+
+resolve_aestrela(Nodo,CaminhoDistancia/CustoDist) :-
+	estima(Nodo, goal(X), EstimaD),
+	aestrela_distancia([[Nodo]/0/EstimaD], InvCaminho/CustoDist/_),
+	inverso(InvCaminho, CaminhoDistancia).
+
+
+aestrela_distancia(Caminhos, Caminho) :-
+	obtem_melhor_distancia(Caminhos, Caminho),
+	Caminho = [Nodo|_]/_/_,goal(Nodo).
+aestrela_distancia(Caminhos, SolucaoCaminho) :-
+	obtem_melhor_distancia(Caminhos, MelhorCaminho),
+	seleciona(MelhorCaminho, Caminhos, OutrosCaminhos),
+	expande_aestrela_distancia(MelhorCaminho, ExpCaminhos),
+	append(OutrosCaminhos, ExpCaminhos, NovoCaminhos),
+        aestrela_distancia(NovoCaminhos, SolucaoCaminho).	
+
+
+obtem_melhor_distancia([Caminho], Caminho) :- !.
+obtem_melhor_distancia([Caminho1/Custo1/Est1,_/Custo2/Est2|Caminhos], MelhorCaminho) :-
+	Custo1 + Est1 =< Custo2 + Est2, !,
+	obtem_melhor_distancia([Caminho1/Custo1/Est1|Caminhos], MelhorCaminho). 
+obtem_melhor_distancia([_|Caminhos], MelhorCaminho) :- 
+	obtem_melhor_distancia(Caminhos, MelhorCaminho).
+	
+
+expande_aestrela_distancia(Caminho, ExpCaminhos) :-
+	findall(NovoCaminho, adjacente_distancia(Caminho,NovoCaminho), ExpCaminhos).
+
+
+adjacente_distancia([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/EstDist) :-
+	grafo(Nodo, ProxNodo, PassoCustoDist),
+	\+ member(ProxNodo, Caminho),
+	NovoCusto is Custo + PassoCustoDist,
+	estima(ProxNodo, goal(X), EstDist).
+
+
+%---------------------------------
+inverso(Xs, Ys):-
+	inverso(Xs, [], Ys).
+inverso([], Xs, Xs).
+inverso([X|Xs],Ys, Zs):-
+	inverso(Xs, [X|Ys], Zs).
+
+seleciona(E, [E|Xs], Xs).
+seleciona(E, [X|Xs], [X|Ys]) :- seleciona(E, Xs, Ys).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% A* algorithm
+% author: Jorge Carlos Valverde Rebaza
+% date: 02/09/2011
+
+getEstima(Origem, Destino, Distancia):- estima(Origem, Destino, Distancia).
+getEstima(Origem, Destino, Distancia):- !, estima(Destino, Origem, Distancia).
+
+
+% regla principal del programa
+encontrarCaminho(Origem, Destino):-
+        localizacao(O,Origem),
+        localizacao(D,Destino),
+        buscaHeuristica([[0,O]],CaminhoInv,D),
+        inverso(CaminhoInv, Caminho),
+        imprimirCaminho(Caminho). % em vez de imprimir guardar
+encontrarCaminho(_,_):-
+        write("Caminho inexiste.").
+
+
+% condição de parada de busqueda heuristica
+buscaHeuristica(Caminhos, [Custo,Destino|Caminho], Destino):-
+        member([Custo,Destino|Caminho],Caminhos),
+        escolherProximo(Caminhos, [Custo1|_], Destino),
+        Custo1 == Custo.
+buscaHeuristica(Caminhos, Solucao, Destino):-
+        escolherProximo(Caminhos, Prox, Destino),
+        removerCaminho(Prox, Caminhos, CaminhosRestantes),
+        procurarProx(Prox, NovosCaminhos),
+        concatenarCaminhos(CaminhosRestantes, NovosCaminhos, ListaCompleta),
+        buscaHeuristica(ListaCompleta, Solucao, Destino).
+
+concatenarCaminhos([],L,L).
+concatenarCaminhos([X|Y],L,[X|Lista]):- concatenarCaminhos(Y,L,Lista).
+
+% Obtiene todos los caminos recorridos hasta el momento 
+% y realiza las comparaciones. Solo se detiene cuando se encuentra
+% el menor camino (menor costo)
+escolherProximo([X],X,_):-!.
+escolherProximo([[Custo1,X1|R1],[Custo2,X2|_]|T], MelhorCaminho, Destino):-
+        getEstima(X1, Destino, Av1),
+        getEstima(X2, Destino, Av2),
+        Av1+Custo1 =< Av2+Custo2,
+        escolherProximo([[Custo1,X1|R1]|T], MelhorCaminho, Destino).
+escolherProximo([[Custo1,X1|_],[Custo2,X2|Resto2]|T], MelhorCaminho, Destino):-
+        getEstima(X1, Destino, Av1),
+        getEstima(X2, Destino, Av2),
+        Av1+Custo1 > Av2+Custo2,
+        escolherProximo([[Custo2,X2|Resto2]|T], MelhorCaminho, Destino).
+
+procurarProx([Custo,N|Caminho],NovosCaminhos):-
+        findall([Custo,NovoN,N|Caminho], (verificarMovimento(N, NovoN,_), \+(member(NovoN,Caminho))), L),
+        atualizarCustosCaminhos(L, NovosCaminhos).
+
+% Actualizacion de los costos de los caminos
+atualizarCustosCaminhos([],[]):- !.
+atualizarCustosCaminhos([[Custo,NovoN,N|Caminho]|T],[[NovoCusto,NovoN,N|Caminho]|T1]):-
+        verificarMovimento(N, NovoN, Distancia),
+        NovoCusto is Custo + Distancia,
+        atualizarCustosCaminhos(T,T1).
+
+verificarMovimento(Origem, Destino, Distancia):-
+        grafo(Origem, Destino, Distancia).
+verificarMovimento(Origem, Destino, Distancia):-
+        grafo(Destino, Origem, Distancia).
+ 
+removerCaminho(X,[X|T],T):-!.
+removerCaminho(X,[Y|T],[Y|T2]):-removerCaminho(X,T,T2).
+
+
+
+
+
+
+% imprimir el resultado
+imprimirCaminho([Custo]):-
+        nl,
+        write('La distancia total recorrida fue de: '),
+        write(Custo),
+        write(' kilometros.').
+imprimirCaminho([CiudadActual|T]):-
+        localizacao(CiudadActual, X),
+        write(X),
+        write(', '),
+        imprimirCaminho(T).
+
+
+imprimirCaminho([CiudadActual|Cola]):- 
+        write('Camino a recorrer: '),
+        imprimirCaminho([CiudadActual|Cola]).
+
+
+% Para ejecutar el programa se debe utilizar la función encontrarCamino(), por ejemplo:
+
+% encontrarCamino('Mehadia' , 'Bucharest').
+% Camino a recorrer: Mehadia, Dobreta, Craiova, Pitesti, Bucharest
+% La distancia total recorrida fue de: 434 kilometros.

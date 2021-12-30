@@ -100,3 +100,53 @@ entrega(loureiro, ctt, carro,        date(2021, 5, 7)/time(8,40,0),  date(2021, 
 entrega(marmore, chronopost, carro,  date(2021, 4, 9)/time(12,5,0),  date(2021, 4, 9)/time(23,0,0),  4.6).
 entrega(flor, ups, mota,             date(2021, 1, 4)/time(16,5,0),  date(2021, 1, 14)/time(1,0,0),   3.9).
 entrega(capa, ctt, carro,            date(2021, 2, 2)/time(7,5,0),   date(2021, 2, 8)/time(0,0,0),   4.4).
+
+% ---------------------------------------------------------
+
+
+
+
+% ------------------FASE 2 -----------------------------------
+% todos os caminhos sãp ambidirecionados
+grafo(x1,  x2,  1.5).
+grafo(x1,  x3,  3.1).
+grafo(x2,  x12, 1).
+grafo(x2,  x4,  4).
+grafo(x3,  x4,  2).
+grafo(x12, x11, 4).
+grafo(x12, x9,  1.5).
+grafo(x4,  x8,  2).
+grafo(x9,  x11, 6).
+grafo(x9,  x8,  1.5).
+grafo(x8,  x7,  1.2).
+grafo(x8,  x6,  4).
+grafo(x6,  x5,  1.5).
+grafo(x6,  x7,  2.2).
+grafo(x10, x11, 3).
+grafo(x10, x7,  4).
+
+localizacao(x2,  green_distribution/casteloes).
+localizacao(x1,  rua_ponte/casteloes).
+localizacao(x4,  rua_ponte/landim).
+localizacao(x6,  rua_ponte/escordo).
+localizacao(x10, rua_ponte/guimaraes).
+
+goal(X) :- localizacao(X, green_distribution/casteloes).
+
+estima(x1,  x2, 1.1).
+estima(x2,  x2, 0).
+estima(x3,  x2, 0.8).
+estima(x4,  x2, 3).
+estima(x5,  x2, 3.8).
+estima(x6,  x2, 4.2).
+estima(x7,  x2, 3.5).
+estima(x8,  x2, 2.3).
+estima(x9,  x2, 2.1).
+estima(x10, x2, 3.5).
+estima(x11, x2, 1).
+estima(x12, x2, 4.2).
+
+
+decrescimo(bicicleta,0.7).
+decrescimo(mota,0.5).
+decrescimo(carro,0.1).
