@@ -133,7 +133,22 @@ localizacao(x10, rua_ponte/guimaraes).
 
 goal(X) :- localizacao(X, green_distribution/casteloes).
 
-estima(x1,  x2, 1.1).
+
+
+% --- ESTIMAS -----------------------
+estima(x1,  x1, 0).
+estima(x2,  x1, 1.1).
+estima(x3,  x1, 2.6).
+estima(x4,  x1, 3.5).   
+estima(x5,  x1, 3.8).
+estima(x6,  x1, 4.8).
+estima(x7,  x1, 4.5).
+estima(x8,  x1, 3.4).
+estima(x9,  x1, 3).
+estima(x10, x1, 3.6).
+estima(x11, x1, 2.8).
+estima(x12, x1, 2).
+% -----------------
 estima(x2,  x2, 0).
 estima(x3,  x2, 0.8).
 estima(x4,  x2, 3).
@@ -145,6 +160,73 @@ estima(x9,  x2, 2.1).
 estima(x10, x2, 3.5).
 estima(x11, x2, 1).
 estima(x12, x2, 4.2).
+% -----------------
+estima(x3,  x3, 0).
+estima(x4,  x3, 1.7).
+estima(x5,  x3, 3.5).
+estima(x6,  x3, 5).
+estima(x7,  x3, 4.5).
+estima(x8,  x3, 3).
+estima(x9,  x3, 4.3).
+estima(x10, x3, 4.8).
+estima(x11, x3, 5.6).
+estima(x12, x3, 3.3).
+% -----------------
+estima(x4,  x4, 0).
+estima(x5,  x4, 1).
+estima(x6,  x4, 2.7).
+estima(x7,  x4, 2.8).
+estima(x8,  x4, 1.8).
+estima(x9,  x4, 3).
+estima(x10, x4, 3.5).
+estima(x11, x4, 5).
+estima(x12, x4, 3.2).
+% -----------------
+estima(x5,  x5, 0).
+estima(x6,  x5, 1.2).
+estima(x7,  x5, 2).
+estima(x8,  x5, 1.7).
+estima(x9,  x5, 2.7).
+estima(x10, x5, 3.8).
+estima(x11, x5, 4.9).
+estima(x12, x5, 3.4).
+% -----------------
+estima(x6,  x6, 0).
+estima(x7,  x6, 1.7).
+estima(x8,  x6, 2).
+estima(x9,  x6, 3.5).
+estima(x10, x6, 4).
+estima(x11, x6, 5.2).
+estima(x12, x6, 4.1).
+% -----------------
+estima(x7,  x7, 0).
+estima(x8,  x7, 1).
+estima(x9,  x7, 1.3).
+estima(x10, x7, 2.1).
+estima(x11, x7, 3.4).
+estima(x12, x7, 2.5).
+% -----------------
+estima(x8,  x8, 0).
+estima(x9,  x8, 0.9).
+estima(x10, x8, 1.5).
+estima(x11, x8, 3.5).
+estima(x12, x8, 2).
+% -----------------
+estima(x9,  x9, 0).
+estima(x10, x9, 0.6).
+estima(x11, x9, 2).
+estima(x12, x9, 0.5).
+% -----------------
+estima(x10, x10, 0).
+estima(x11, x10, 1.7).
+estima(x12, x10, 1.2).
+% -----------------
+estima(x11, 11, 0).
+estima(x12, 11, 1.4).
+% -----------------
+estima(x12, x12, 0).
+% ------------------------------------------------
+
 
 
 decrescimo(bicicleta,0.7).

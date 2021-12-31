@@ -443,10 +443,38 @@ replace_existing_fact(OldFact, NewFact) :-
 
 
 
-getTotalPeso([], 0).
-getTotalPeso([encomenda(registada, _, _, Peso, _, _, _)|T], X) :- getTotalPeso(T, Y), X is Y+Peso.
-getTotalPeso([H|T], X) :- getTotalPeso(T, X).
+getMoradasPeso([], []).
+getMoradasPeso([IdEnc|T], L) :- encomenda(registada, IdEnc, _, Peso, _, Morada1, _), 
+                                getMoradasPeso(T, L2), 
+                                append(Morada1/[IdEnc/Peso], L2, L).
+getMoradasPeso([H|T], X) :- getMoradasPeso(T, X).
 
+joinMoradas1([], L).
+joinMoradas1([Morada/Info| T], L) :- \+member((Morada/_), T), joinMoradas1(T, Y), append(Morada/Info, Y, L).
+joinMoradas1([Morada/Info| T], L) :- add1(Morada/Info, T, L). 
+
+add1(Morada/Info, [], [Morada/Info]).
+add1(Morada/Info1, [Morada/Info2|T], L) :- append(Info1, Info2, Info), [Info|L].
+add1(Morada/Info, [H|T], L) :- add1(Morada/Info, T, Y), append(H, Y).
+
+
+joinMoradas([] , L , L).
+joinMoradas([Morada/H|T], Acc, X) :- adicionaMorada(Morada/H, Acc,[],Res).
+                                     joinMoradas(T,Res,X).
+
+
+adicionaMorada(Morada/H, [], Acc, [Morada/H|Acc]).
+adicionaMorada(Morada/H1, [Morada/H2 | T], Acc, X) :- append(H1,H2,Res),
+                                                      append(Morada/Res, T ,R),
+                                                      append(R,Acc,X).
+adicionaMorada(H1 , [H2 | T], Acc,X) :- append(H2,Acc,Res),
+                                        adicionaMorada(H1,T,Res,X).
+                     
+moradaPertence(_, []) :- false.
+moradaPertence(Morada,[Morada/_ | T]).
+moradaPertence(Morada,[Morada1/_ | T]) :- moradaPertence(Morada,T). 
+
+separarVoltas(L, X) :- encomenda(registada, IdEnc, _, Peso, _, _, _)setof(L, Bag), separarVoltas(Bag, X, 0).
 separarVoltas([],L, _).
 separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed) :- 
                 (TotUsed+Peso > 100) -> separarVoltas(T, [L2|L], 0);
@@ -454,6 +482,8 @@ separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed
 
 % makeCircuito(IdEstafeta) :-
         % findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag),
+        % getMoradasPeso(Bag, Bag1),
+        % joinMoradas(Bag1, Bag2),
         % separarVoltas(Bag, RET),
         % getTotalPeso(Bag, X).
         % ((X>100, darSplit, !); (X>20, veiculo é carro ); (X>5, veiculo é mota ); (X>=0, veiculo é bicicleta)),
