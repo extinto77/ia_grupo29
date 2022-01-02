@@ -43,11 +43,18 @@ timeElapsed(DateI, TimeI, DateF, TimeF, Ans) :-
         Ans is X1 + X2.
 
 % dizer que prazo máximo é de 30 dias
-convertTime(Val, Date/Time) :-
-        Val>0, rounding(Val, D, Dec1),
+convertTimeFromDias(Val, Date/Time) :-
+        Val>0, Val=<30, rounding(Val, D, Dec1),
         rounding(Dec1*24, H, Dec2), 
         rounding(Dec2*60, M, _),
         Date = date(0, 0, D), Time = time(H, M, 0).
+
+% dizer que prazo máximo é de 23 horas 59 min e 59 sec
+convertTimeFromHoras(Val, Time) :-
+        Val>0, Val<24, rounding(Val, H, Dec1),
+        rounding(Dec1*60, M, Dec2), 
+        rounding(Dec2*60, S, _),
+        Time = time(H, M, S).
 
 rounding(Val, Int, Decimal) :-
         (Val>1) -> (
@@ -437,25 +444,119 @@ replace_existing_fact(OldFact, NewFact) :-
 % ---------Escolher o circuito mais rápido (usando o critério da distância);
 % ---------Escolher o circuito mais ecológico (usando um critério de tempo);
 
+tail([],   []).
+tail([_|T],T).
+
+
+infoPorEntregar(Bag) :- findall(IdEnc, entrega(IdEnc, _, _, _, _, empty), Bag).
+
+
+infoPorEntregarEstafeta(IdEstafeta, Bag) :- findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag).
+
+
+
+% -------------------------------- ALGORITMOS DE PROCURA
+caminhoAEstrela([IdEnc], FULL/Custo, Peso, Time, Veiculo) :- encomenda(registada, IdEnc, _, _, _, Morada, _), %rever peso
+                                             localizacao(Orig,Morada),
+                                             resolve_aestrela(Orig, x2, Caminho/Custo),
+                                             tail(Caminho,T),
+                                             getGrafo(Orig, x2, NewCusto),
+                                             write(NewCusto),write(" "),write(Veiculo),write(" \n"),
+                                             calculaTempo(0, NewCusto, Veiculo, Time),
+        write(Caminho), write("111\n").
+
+
+
+caminhoAEstrela([IdEnc,IdEnc2|T1], FULL/Custo, Peso, Time, Veiculo) :- % antes organixar pela estima,   ver peso etempo 
+                                                encomenda(registada, IdEnc, _, PesoTmp, _, Morada, _),
+                                                encomenda(registada, IdEnc2, _, _, _, Morada2, _),
+                                                localizacao(Orig, Morada),
+                                                localizacao(Dest, Morada2),
+                                                NewPeso is Peso - PesoTmp,
+                                                %((\+member(Dest, FULL)->
+                                                resolve_aestrela(Orig, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
+                                                caminhoAEstrela([IdEnc2|T1], F1/C1, NewPeso, T1, Veiculo),
+                                                write(IdEnc),write("2222\n"),
+                                                tail(F1,FTemp),
+                                                append(Caminho, FTemp, FULL),
+                                                Custo is C1+CustoTmp,
+                                                getGrafo(Orig, x2, NewCusto),
+                                                calculaTempo(PesoTmp, NewCusto, Veiculo, T2),
+                                                Time is T1+T2
+                                                        
+                                                        
+                                                        ,
+        write(Caminho), write("222\n"). /*;
+                                               % caminhoAEstrela([IdEnc|T1], FULL/Custo, NewPeso, Time, Veiculo)).*/
+
+caminhoAEstrela([_,IdEnc|T1], FULL/Custo, Peso, Time, Veiculo) :- 
+                        encomenda(registada, IdEnc, _, PesoTmp, _, Morada, _),
+                        localizacao(Dest, Morada),
+                        resolve_aestrela(x2, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
+                        getGrafo(Orig, x2, NewCusto),
+                        calculaTempo(Peso, NewCusto, Veiculo, Tempo),
+                        caminhoAEstrela([IdEnc|T1], F1/C1, Peso, T3, Veiculo),
+                        Time is Tempo + T3,
+                        tail(F1,FTemp),
+                        append(Caminho, FTemp, FULL),
+                        Custo is C1+CustoTmp
+                        
+                        ,
+        write(Caminho), write("333\n").
+
+caminhoAEstrela(_, _) :- write("Impossivel realizar entrega").
+
+% --------------------------------
+caminhoGulosa(IdEnc, FULL/CustoDist/Peso) :- encomenda(registada, IdEnc, _, Peso, _, Morada, _),
+                                                localizacao(X, Morada),
+                                                resolve_gulosa(X, Caminho/CustoDist, InvCaminho), % depois passar o dobro pq volta para trás
+                                                tail(InvCaminho, T),
+                                                append(Caminho, T, FULL).
+caminhoGulosa(_, _) :- !, write("Impossivel realizar entrega").
+% --------------------------------
+caminhoProfundidade(IdEnc, FULL/CustoDist/Peso) :- encomenda(registada, IdEnc, _, Peso, _, Morada, _),
+                                                localizacao(X, Morada),
+                                                resolve_prof(X, [_|Caminho]/CustoDist, InvCaminho), % depois passar o dobro pq volta para trás
+                                                tail(InvCaminho, T),
+                                                append(Caminho, T, FULL).
+caminhoProfundidade(_, _) :- !, write("Impossivel realizar entrega").
+% --------------------------------
+caminhoLargura(IdEnc, FULL/CustoDist/Peso) :- encomenda(registada, IdEnc, _, Peso, _, Morada, _),
+                                                localizacao(X, Morada),
+                                                resolve_larg(X,Caminho/CustoDist, InvCaminho), % depois passar o dobro pq volta para trás
+                                                tail(InvCaminho, T),
+                                                append(Caminho, T, FULL).
+caminhoLargura(_, _) :- !, write("Impossivel realizar entrega").
+% --------------------------------
+
+
+
+
+calculaTempo(Peso, Distancia, Veiculo, Time) :-
+                        veiculo(Veiculo, VelMed, Max),
+                        (((Max < Peso) -> write("Veículo selecionado não suporta carga da encomenda"), !);
+                        drag(Veiculo, DG),
+                        Time is Distancia/(VelMed-(DG*Peso))).
 
 
 
 
 
 
+/*
 getMoradasPeso([], []).
 getMoradasPeso([IdEnc|T], L) :- encomenda(registada, IdEnc, _, Peso, _, Morada1, _), 
                                 getMoradasPeso(T, L2), 
                                 append(Morada1/[IdEnc/Peso], L2, L).
-getMoradasPeso([H|T], X) :- getMoradasPeso(T, X).
+getMoradasPeso([_|T], X) :- getMoradasPeso(T, X).
 
-joinMoradas1([], L).
+joinMoradas1([], _).
 joinMoradas1([Morada/Info| T], L) :- \+member((Morada/_), T), joinMoradas1(T, Y), append(Morada/Info, Y, L).
 joinMoradas1([Morada/Info| T], L) :- add1(Morada/Info, T, L). 
 
 add1(Morada/Info, [], [Morada/Info]).
-add1(Morada/Info1, [Morada/Info2|T], L) :- append(Info1, Info2, Info), [Info|L].
-add1(Morada/Info, [H|T], L) :- add1(Morada/Info, T, Y), append(H, Y).
+add1(Morada/Info1, [Morada/Info2|_], L) :- append(Info1, Info2, Info), [Info|L].
+add1(Morada/Info, [H|T], _) :- add1(Morada/Info, T, Y), append(H, Y).
 
 
 joinMoradas([] , L , L).
@@ -474,7 +575,7 @@ moradaPertence(_, []) :- false.
 moradaPertence(Morada,[Morada/_ | T]).
 moradaPertence(Morada,[Morada1/_ | T]) :- moradaPertence(Morada,T). 
 
-separarVoltas(L, X) :- encomenda(registada, IdEnc, _, Peso, _, _, _)setof(L, Bag), separarVoltas(Bag, X, 0).
+separarVoltas(L, X) :- encomenda(registada, IdEnc, _, Peso, _, _, _), setof(L, L, Bag), separarVoltas(Bag, X, 0). % ta mal o setof
 separarVoltas([],L, _).
 separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed) :- 
                 (TotUsed+Peso > 100) -> separarVoltas(T, [L2|L], 0);
@@ -490,25 +591,25 @@ separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed
         % alterarEstadoParaEmDistribuicao,
 
         % resolve_aestrela().
+*/
+
+%--------------------------------- A ESTRELA
+
+resolve_aestrela(Origem, Destino, Caminho/Custo) :-
+        getEstima(Origem, Destino, EstimaD),
+	aestrela_distancia([[Origem]/0/EstimaD], InvCaminho/Custo/_,Destino),
+	reverse(InvCaminho, Caminho).
 
 
-%---------------------------------pesquisa a estrela 
-
-resolve_aestrela(Nodo,CaminhoDistancia/CustoDist) :-
-	estima(Nodo, goal(X), EstimaD),
-	aestrela_distancia([[Nodo]/0/EstimaD], InvCaminho/CustoDist/_),
-	inverso(InvCaminho, CaminhoDistancia).
-
-
-aestrela_distancia(Caminhos, Caminho) :-
+aestrela_distancia(Caminhos, Caminho,Destino) :-
 	obtem_melhor_distancia(Caminhos, Caminho),
-	Caminho = [Nodo|_]/_/_,goal(Nodo).
-aestrela_distancia(Caminhos, SolucaoCaminho) :-
+	Caminho = [Nodo|_]/_/_,Nodo == Destino.
+aestrela_distancia(Caminhos, SolucaoCaminho,Destino) :-
 	obtem_melhor_distancia(Caminhos, MelhorCaminho),
 	seleciona(MelhorCaminho, Caminhos, OutrosCaminhos),
-	expande_aestrela_distancia(MelhorCaminho, ExpCaminhos),
+	expande_aestrela_distancia(MelhorCaminho, ExpCaminhos,Destino),
 	append(OutrosCaminhos, ExpCaminhos, NovoCaminhos),
-        aestrela_distancia(NovoCaminhos, SolucaoCaminho).	
+        aestrela_distancia(NovoCaminhos, SolucaoCaminho, Destino).	
 
 
 obtem_melhor_distancia([Caminho], Caminho) :- !.
@@ -519,139 +620,112 @@ obtem_melhor_distancia([_|Caminhos], MelhorCaminho) :-
 	obtem_melhor_distancia(Caminhos, MelhorCaminho).
 	
 
-expande_aestrela_distancia(Caminho, ExpCaminhos) :-
-	findall(NovoCaminho, adjacente_distancia(Caminho,NovoCaminho), ExpCaminhos).
+expande_aestrela_distancia(Caminho, ExpCaminhos,Destino) :-
+	findall(NovoCaminho, adjacente_distancia(Caminho,NovoCaminho,Destino), ExpCaminhos).
 
 
-adjacente_distancia([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/EstDist) :-
-	grafo(Nodo, ProxNodo, PassoCustoDist),
+adjacente_distancia([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/EstDist, Destino) :-
+	getGrafo(Nodo, ProxNodo, PassoCustoDist),
 	\+ member(ProxNodo, Caminho),
 	NovoCusto is Custo + PassoCustoDist,
-	estima(ProxNodo, goal(X), EstDist).
+	estima(ProxNodo, Destino, EstDist).
+
+% --------------------------------- GULOSA
 
 
-%---------------------------------
-inverso(Xs, Ys):-
-	inverso(Xs, [], Ys).
-inverso([], Xs, Xs).
-inverso([X|Xs],Ys, Zs):-
-	inverso(Xs, [X|Ys], Zs).
+resolve_gulosa(Origem, Destino, CaminhoDistancia/CustoDist) :-
+        getEstima(Origem,Destino,EstimaD),
+	agulosa_distancia_g([[Origem]/0/EstimaD], InvCaminho/CustoDist/_,Destino),
+	reverse(InvCaminho, CaminhoDistancia).
+
+
+agulosa_distancia_g(Caminhos, Caminho,Destino) :-
+	obtem_melhor_distancia_g(Caminhos, Caminho),
+	Caminho = [Nodo|_]/_/_,
+	Nodo == Destino.
+agulosa_distancia_g(Caminhos, SolucaoCaminho, Destino) :-
+	obtem_melhor_distancia_g(Caminhos, MelhorCaminho),
+	seleciona(MelhorCaminho, Caminhos, OutrosCaminhos),
+	expande_agulosa_distancia_g(MelhorCaminho, ExpCaminhos,Destino),
+	append(OutrosCaminhos, ExpCaminhos, NovoCaminhos),
+        agulosa_distancia_g(NovoCaminhos, SolucaoCaminho, Destino).	
+
+
+obtem_melhor_distancia_g([Caminho], Caminho) :- !.
+obtem_melhor_distancia_g([Caminho1/Custo1/Est1,_/_/Est2|Caminhos], MelhorCaminho) :-
+	Est1 =< Est2, !,
+	obtem_melhor_distancia_g([Caminho1/Custo1/Est1|Caminhos], MelhorCaminho). 
+obtem_melhor_distancia_g([_|Caminhos], MelhorCaminho) :- 
+	obtem_melhor_distancia_g(Caminhos, MelhorCaminho).
+	
+
+expande_agulosa_distancia_g(Caminho, ExpCaminhos,Destino) :-
+	findall(NovoCaminho, adjacente_distancia(Caminho,NovoCaminho, Destino), ExpCaminhos). % ver este destino
+	
+
+
+% --------------------------------- LARGURA
+
+
+
+resolve_larg(Orig, Dest, Cam/Custo):- goal(Dest),
+                                        resolvebF(X,[[Orig]],Cam),
+                                        getCusto(Cam,Custo),
+                                        reverse(Cam,InvCaminho).
+
+
+resolvebF(Dest, [[Dest|T]|_], Sol) :- reverse([Dest|T],Sol).
+
+resolvebF(Dest, [LA|Outros], Cam) :- LA = [Act|_],
+                                    findall([X|LA], (Dest \== Act, getGrafo(Act,X,_), \+ member(X,LA)), Bag), 
+                                    append(Outros,Bag,Todos),
+                                    resolvebF(Dest,Todos,Cam).
+
+getCusto([_],0).
+getCusto([H1,H2|T], R) :- getGrafo(H1,H2,Aux),getCusto([H2|T], R2) , R is Aux + R2.                              
+
+% --------------------- PROFUNDIDADE
+
+resolve_prof(Inicio, Dest, [Inicio|Caminho]/C) :-
+                profPrimeiro(Inicio, Dest,[Inicio],Caminho,C),
+                reverse(Caminho, InvCaminho).
+
+profPrimeiro(Nodo, Nodo ,  _ , [] , 0).
+profPrimeiro(Nodo, Dest , Hist, [Prox|Caminho], C) :-
+                getGrafo(Nodo,Prox, C1),
+                \+(member(Prox,Hist)),
+                profPrimeiro(Prox, Dest ,[Prox|Hist], Caminho, C2), C is C1 + C2.
+                
+
+% -------------------- PROFUNDIDATE LIMITADA
+
+resolve_limitada(Origem, Destino, Caminho) :-
+        from(Limite,1,5),
+        profLimitada(Origem,Destino,0,Limite,Caminho).
+        
+profLimitada(Destino,Destino,Prof,Limite,[Destino]) :-
+        Prof<Limite.
+        
+profLimitada(Nodo,Destino,Prof,Limite,[Nodo|Resto]) :-
+        Prof<Limite,
+        Prof2 is Prof+1,
+        getGrafo(Nodo,Prox,_),
+        profLimitada(Prox,Destino,Prof2,Limite,Resto).
+
+from(X,X,Inc).
+from(X,N,Inc) :-
+        N2 is N+Inc,
+        from(X,N2,Inc).
+%--------------------------------- AUXILIARES
 
 seleciona(E, [E|Xs], Xs).
 seleciona(E, [X|Xs], [X|Ys]) :- seleciona(E, Xs, Ys).
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-% A* algorithm
-% author: Jorge Carlos Valverde Rebaza
-% date: 02/09/2011
-
 getEstima(Origem, Destino, Distancia):- estima(Origem, Destino, Distancia).
 getEstima(Origem, Destino, Distancia):- !, estima(Destino, Origem, Distancia).
 
-
-% regla principal del programa
-encontrarCaminho(Origem, Destino):-
-        localizacao(O,Origem),
-        localizacao(D,Destino),
-        buscaHeuristica([[0,O]],CaminhoInv,D),
-        inverso(CaminhoInv, Caminho),
-        imprimirCaminho(Caminho). % em vez de imprimir guardar
-encontrarCaminho(_,_):-
-        write("Caminho inexiste.").
+getGrafo(Origem, Destino, Distancia):- grafo(Origem, Destino, Distancia).
+getGrafo(Origem, Destino, Distancia):- !, grafo(Destino, Origem, Distancia).
 
 
-% condição de parada de busqueda heuristica
-buscaHeuristica(Caminhos, [Custo,Destino|Caminho], Destino):-
-        member([Custo,Destino|Caminho],Caminhos),
-        escolherProximo(Caminhos, [Custo1|_], Destino),
-        Custo1 == Custo.
-buscaHeuristica(Caminhos, Solucao, Destino):-
-        escolherProximo(Caminhos, Prox, Destino),
-        removerCaminho(Prox, Caminhos, CaminhosRestantes),
-        procurarProx(Prox, NovosCaminhos),
-        concatenarCaminhos(CaminhosRestantes, NovosCaminhos, ListaCompleta),
-        buscaHeuristica(ListaCompleta, Solucao, Destino).
-
-concatenarCaminhos([],L,L).
-concatenarCaminhos([X|Y],L,[X|Lista]):- concatenarCaminhos(Y,L,Lista).
-
-% Obtiene todos los caminos recorridos hasta el momento 
-% y realiza las comparaciones. Solo se detiene cuando se encuentra
-% el menor camino (menor costo)
-escolherProximo([X],X,_):-!.
-escolherProximo([[Custo1,X1|R1],[Custo2,X2|_]|T], MelhorCaminho, Destino):-
-        getEstima(X1, Destino, Av1),
-        getEstima(X2, Destino, Av2),
-        Av1+Custo1 =< Av2+Custo2,
-        escolherProximo([[Custo1,X1|R1]|T], MelhorCaminho, Destino).
-escolherProximo([[Custo1,X1|_],[Custo2,X2|Resto2]|T], MelhorCaminho, Destino):-
-        getEstima(X1, Destino, Av1),
-        getEstima(X2, Destino, Av2),
-        Av1+Custo1 > Av2+Custo2,
-        escolherProximo([[Custo2,X2|Resto2]|T], MelhorCaminho, Destino).
-
-procurarProx([Custo,N|Caminho],NovosCaminhos):-
-        findall([Custo,NovoN,N|Caminho], (verificarMovimento(N, NovoN,_), \+(member(NovoN,Caminho))), L),
-        atualizarCustosCaminhos(L, NovosCaminhos).
-
-% Actualizacion de los costos de los caminos
-atualizarCustosCaminhos([],[]):- !.
-atualizarCustosCaminhos([[Custo,NovoN,N|Caminho]|T],[[NovoCusto,NovoN,N|Caminho]|T1]):-
-        verificarMovimento(N, NovoN, Distancia),
-        NovoCusto is Custo + Distancia,
-        atualizarCustosCaminhos(T,T1).
-
-verificarMovimento(Origem, Destino, Distancia):-
-        grafo(Origem, Destino, Distancia).
-verificarMovimento(Origem, Destino, Distancia):-
-        grafo(Destino, Origem, Distancia).
- 
-removerCaminho(X,[X|T],T):-!.
-removerCaminho(X,[Y|T],[Y|T2]):-removerCaminho(X,T,T2).
-
-
-
-
-
-
-% imprimir el resultado
-imprimirCaminho([Custo]):-
-        nl,
-        write('La distancia total recorrida fue de: '),
-        write(Custo),
-        write(' kilometros.').
-imprimirCaminho([CiudadActual|T]):-
-        localizacao(CiudadActual, X),
-        write(X),
-        write(', '),
-        imprimirCaminho(T).
-
-
-imprimirCaminho([CiudadActual|Cola]):- 
-        write('Camino a recorrer: '),
-        imprimirCaminho([CiudadActual|Cola]).
-
-
-% Para ejecutar el programa se debe utilizar la función encontrarCamino(), por ejemplo:
-
-% encontrarCamino('Mehadia' , 'Bucharest').
-% Camino a recorrer: Mehadia, Dobreta, Craiova, Pitesti, Bucharest
-% La distancia total recorrida fue de: 434 kilometros.

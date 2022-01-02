@@ -125,14 +125,13 @@ grafo(x6,  x7,  2.2).
 grafo(x10, x11, 3).
 grafo(x10, x7,  4).
 
-localizacao(x2,  green_distribution/casteloes).
-localizacao(x1,  rua_ponte/casteloes).
-localizacao(x4,  rua_ponte/landim).
-localizacao(x6,  rua_ponte/escordo).
-localizacao(x10, rua_ponte/guimaraes).
+localizacao(x2,  casteloes/green_distribution).
+localizacao(x1,  casteloes/rua_ponte).
+localizacao(x4,  landim/rua_ponte).
+localizacao(x6,  escordo/rua_ponte).
+localizacao(x10, guimaraes/rua_ponte).
 
 goal(X) :- localizacao(X, green_distribution/casteloes).
-
 
 
 % --- ESTIMAS -----------------------
@@ -155,11 +154,11 @@ estima(x4,  x2, 3).
 estima(x5,  x2, 3.8).
 estima(x6,  x2, 4.2).
 estima(x7,  x2, 3.5).
-estima(x8,  x2, 2.3).
-estima(x9,  x2, 2.1).
+estima(x8,  x2, 2).
+estima(x9,  x2, 1.5).
 estima(x10, x2, 3.5).
 estima(x11, x2, 1).
-estima(x12, x2, 4.2).
+estima(x12, x2, 0.9).
 % -----------------
 estima(x3,  x3, 0).
 estima(x4,  x3, 1.7).
@@ -229,6 +228,6 @@ estima(x12, x12, 0).
 
 
 
-decrescimo(bicicleta,0.7).
-decrescimo(mota,0.5).
-decrescimo(carro,0.1).
+drag(bicicleta, 0.7).
+drag(mota,      0.5).
+drag(carro,     0.1).
