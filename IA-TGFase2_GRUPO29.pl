@@ -444,6 +444,9 @@ replace_existing_fact(OldFact, NewFact) :-
 % ---------Escolher o circuito mais rápido (usando o critério da distância);
 % ---------Escolher o circuito mais ecológico (usando um critério de tempo);
 
+getCusto([_],0).
+getCusto([H1,H2|T], R) :- getGrafo(H1,H2,Aux),getCusto([H2|T], R2) , R is Aux + R2.   
+
 tail([],   []).
 tail([_|T],T).
 
@@ -467,7 +470,11 @@ getPesoTotal([home|T],Peso) :- getPesoTotal(T,Peso).
 getPesoTotal([IdEnc|T], Peso) :- encomenda(registada,IdEnc, _ , PAux, _ , _ , _),
                                  getPesoTotal(T,P),
                                  Peso is P + PAux.
-
+getSpecialPesoTotal([],0).
+getSpecialPesoTotal([_/P1|T], Peso) :- 
+        Peso is P1+PesoAux,
+        getSpecialPesoTotal(T,PesoAux).
+                        
 ordenaPorEstima([], R, R2) :- reverse(R,R2).
 ordenaPorEstima([H|T], [], R) :- getMenorEstima(home,T,H,Aux), apagar(Aux,[H|T],L),ordenaPorEstima(L,[Aux,home],R).
 ordenaPorEstima([IdEnc|T], Res, R) :-  Res = [H|_],
@@ -490,64 +497,73 @@ getMenorEstima(IdEnc, [H|T], Acc, R) :- getIdMorada(H,Id),
                                         R < R2, getMenorEstima(home,T,H,R);
                                         getMenorEstima(IdEnc,T,Acc,R).
 
-% -------------------------------- ALGORITMOS DE PROCURA
-caminhoAEstrela([IdEnc], FULL/Custo, _ , Time, Veiculo) :- 
-                                             getIdMorada(IdEnc, Orig),
-                                             resolve_aestrela(Orig, x2, FULL/Custo),
-                                             calculaTempo(0, Custo, Veiculo, Time).
+
+veiculosPossiveis([IdEnc|T], Veiculos) :-
+        getPesoTotal([IdEnc|T], PT),
+        (PT=<100,PT>20) -> Veiculos=[carro];
+        (PT=<20,PT>5)   -> Veiculos=[mota, carro];
+        (PT>0,PT=<5)    -> Veiculos=[bicicleta, mota, carro];
+        Veiculos=[].
 
 
-caminhoAEstrela([home,IdEnc|T1], FULL/Custo, Peso, Time, Veiculo) :- 
-                        getIdMorada(IdEnc,Dest),
-                        resolve_aestrela(x2, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
-                        calculaTempo(Peso, CustoTmp, Veiculo, Tempo),
-                        caminhoAEstrela([IdEnc|T1], F1/C1, Peso, T3, Veiculo),
-                        Time is Tempo + T3,
-                        tail(F1,FTemp),
-                        append(Caminho, FTemp, FULL),
-                        Custo is C1+CustoTmp.
+makeIdPesoEncomendas([IdEnc|T], L) :-
+        getIdMoradaPeso(IdEnc, Id, Peso),
+        makeIdPesoEncomendas(T, L1),
+        append(Id/Peso, L1, L).
+
+deleteAll([], _, []).
+deleteAll([H|T], Elem, L) :-
+        H==Elem -> deleteAll(T, Elem, L);
+        deleteAll(T, Elem, L1),
+        append(H, L1, L).
+
+% caminhoTempoCerto(_, _, 0, _)
+caminhoTempoCerto([Id1,Id2], Encomendas, Time, Veiculo, Tempos):-
+        getGrafo(Id1, Id2, X),
+        getSpecialPesoTotal(Encomendas, Peso),
+        calculaTempo(Peso, X, Veiculo, Tempo),
+        LastTime is Time+Tempo,
+        Tempos=[LastTime].
+caminhoTempoCerto([Id1,Id2|T1], Encomendas, Time, Veiculo, Tempos) :-
+        getGrafo(Id1, Id2, X),
+        getPesoTotal(Encomendas, Peso),
+        calculaTempo(Peso, X, Veiculo, Tempo),
+        NTime is Time+Tempo,
+        deleteAll(Encomendas, Id1/_, EncomendasR),
+        caminhoTempoCerto([Id2|T1], EncomendasR, NTime, ).
 
 
+% -------------------------------- ALGORITMO GERAL - 1 : A* | 2 : Gulosa | 3 : Prof | 4 : Larg | 5 : Prof Limitada
 
-caminhoAEstrela([IdEnc,IdEnc2|T1], FULL/Custo, Peso, Time, Veiculo) :- % antes organixar pela estima,   ver peso etempo 
-                                                getIdMoradaPeso(IdEnc,Orig,PesoTmp),
-                                                getIdMorada(IdEnc2,Dest),
-                                                NewPeso is Peso - PesoTmp,
-                                                resolve_aestrela(Orig, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
-                                                caminhoAEstrela([IdEnc2|T1], F1/C1, NewPeso, Temp1, Veiculo),
-                                                tail(F1,FTemp),
-                                                append(Caminho, FTemp, FULL),
-                                                Custo is C1+CustoTmp,
-                                                calculaTempo(NewPeso, CustoTmp, Veiculo, T2),
-                                                Time is Temp1+T2.
-        
+escolheAlgoritmo(Alg, Orig, Dest, Caminho) :-
+         Alg == 1 -> resolve_aestrela(Orig, Dest, Caminho);
+         Alg == 2 -> resolve_gulosa(Orig,Dest, Caminho);
+         Alg == 3 -> resolve_prof(Orig,Dest, Caminho);
+         Alg == 4 -> resolve_larg(Orig,Dest, Caminho);
+         Alg == 5 -> resolve_limitada(Orig,Dest, Caminho);
+         !,fail.
 
-caminhoAEstrela(_, _) :- write("Impossivel realizar entrega").
+encontraCircuito([IdEnc], Alg ,FULL/Custo) :- 
+        getIdMorada(IdEnc, Orig),
+        escolheAlgoritmo(Alg,Orig,x2,FULL/Custo).
 
-% --------------------------------
-caminhoGulosa(IdEnc, FULL/CustoDist/Peso) :- encomenda(registada, IdEnc, _, Peso, _, Morada, _),
-                                                localizacao(X, Morada),
-                                                resolve_gulosa(X, Caminho/CustoDist, InvCaminho), % depois passar o dobro pq volta para trás
-                                                tail(InvCaminho, T),
-                                                append(Caminho, T, FULL).
-caminhoGulosa(_, _) :- !, write("Impossivel realizar entrega").
-% --------------------------------
-caminhoProfundidade(IdEnc, FULL/CustoDist/Peso) :- encomenda(registada, IdEnc, _, Peso, _, Morada, _),
-                                                localizacao(X, Morada),
-                                                resolve_prof(X, [_|Caminho]/CustoDist, InvCaminho), % depois passar o dobro pq volta para trás
-                                                tail(InvCaminho, T),
-                                                append(Caminho, T, FULL).
-caminhoProfundidade(_, _) :- !, write("Impossivel realizar entrega").
-% --------------------------------
-caminhoLargura(IdEnc, FULL/CustoDist/Peso) :- encomenda(registada, IdEnc, _, Peso, _, Morada, _),
-                                                localizacao(X, Morada),
-                                                resolve_larg(X,Caminho/CustoDist, InvCaminho), % depois passar o dobro pq volta para trás
-                                                tail(InvCaminho, T),
-                                                append(Caminho, T, FULL).
-caminhoLargura(_, _) :- !, write("Impossivel realizar entrega").
-% --------------------------------
+encontraCircuito([home,IdEnc|T1], Alg , FULL/Custo) :- 
+        getIdMorada(IdEnc,Dest),
+        escolheAlgoritmo(Alg, x2, Dest, Caminho/CustoTmp),
+        encontraCircuito([IdEnc|T1], Alg,F1/C1),
+        tail(F1,FTemp),
+        append(Caminho, FTemp, FULL),
+        Custo is C1+CustoTmp.
 
-
+encontraCircuito([IdEnc,IdEnc2|T1], Alg, FULL/Custo) :- % antes organixar pela estima,   ver peso etempo 
+           getIdMorada(IdEnc,Orig),
+           getIdMorada(IdEnc2,Dest),
+           escolheAlgoritmo(Alg, Orig, Dest, Caminho/CustoTmp),
+           encontraCircuito([IdEnc2|T1], Alg,F1/C1),
+           tail(F1,FTemp),
+           append(Caminho, FTemp, FULL),
+           Custo is C1+CustoTmp.
+           
 
 
 calculaTempo(Peso, Distancia, Veiculo, Time) :-
@@ -555,9 +571,6 @@ calculaTempo(Peso, Distancia, Veiculo, Time) :-
                         (((Max < Peso) -> write("Veículo selecionado não suporta carga da encomenda"), !);
                         drag(Veiculo, DG),
                         Time is Distancia/(VelMed-(DG*Peso))).
-
-
-
 
 
 
@@ -686,9 +699,8 @@ expande_agulosa_distancia_g(Caminho, ExpCaminhos,Destino) :-
 
 
 
-resolve_larg(Orig, Dest, Cam/Custo):- goal(Dest),
-                                        resolvebF(Dest,[[Orig]],Cam),
-                                        getCusto(Cam,Custo).
+resolve_larg(Orig, Dest, Cam/Custo):- resolvebF(Dest,[[Orig]],Cam),
+                                      getCusto(Cam,Custo).
 
 
 resolvebF(Dest, [[Dest|T]|_], Sol) :- reverse([Dest|T],Sol).
@@ -696,10 +708,7 @@ resolvebF(Dest, [[Dest|T]|_], Sol) :- reverse([Dest|T],Sol).
 resolvebF(Dest, [LA|Outros], Cam) :- LA = [Act|_],
                                     findall([X|LA], (Dest \== Act, getGrafo(Act,X,_), \+ member(X,LA)), Bag), 
                                     append(Outros,Bag,Todos),
-                                    resolvebF(Dest,Todos,Cam).
-
-getCusto([_],0).
-getCusto([H1,H2|T], R) :- getGrafo(H1,H2,Aux),getCusto([H2|T], R2) , R is Aux + R2.                              
+                                    resolvebF(Dest,Todos,Cam).                           
 
 % --------------------- PROFUNDIDADE
 
@@ -715,9 +724,10 @@ profPrimeiro(Nodo, Dest , Hist, [Prox|Caminho], C) :-
 
 % -------------------- PROFUNDIDATE LIMITADA
 
-resolve_limitada(Origem, Destino, Caminho) :-
-        from(Limite,1,5),
-        profLimitada(Origem,Destino,0,Limite,Caminho).
+resolve_limitada(Origem, Destino, Caminho/C) :-
+        barreira(Limite,1,2),
+        profLimitada(Origem,Destino,0,Limite,Caminho),
+        getCusto(Caminho,C).
         
 profLimitada(Destino,Destino,Prof,Limite,[Destino]) :-
         Prof<Limite.
@@ -728,10 +738,10 @@ profLimitada(Nodo,Destino,Prof,Limite,[Nodo|Resto]) :-
         getGrafo(Nodo,Prox,_),
         profLimitada(Prox,Destino,Prof2,Limite,Resto).
 
-from(X,X,_).
-from(X,N,Inc) :-
+barreira(X,X,_).
+barreira(X,N,Inc) :-
         N2 is N+Inc,
-        from(X,N2,Inc).
+        barreira(X,N2,Inc).
 %--------------------------------- AUXILIARES
 
 seleciona(E, [E|Xs], Xs).
