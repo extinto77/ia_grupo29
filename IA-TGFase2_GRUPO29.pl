@@ -472,8 +472,8 @@ getPesoTotal([IdEnc|T], Peso) :- encomenda(registada,IdEnc, _ , PAux, _ , _ , _)
                                  Peso is P + PAux.
 getSpecialPesoTotal([],0).
 getSpecialPesoTotal([_/P1|T], Peso) :- 
-        Peso is P1+PesoAux,
-        getSpecialPesoTotal(T,PesoAux).
+        getSpecialPesoTotal(T,PesoAux),
+        Peso is P1+PesoAux.
                         
 ordenaPorEstima([], R, R2) :- reverse(R,R2).
 ordenaPorEstima([H|T], [], R) :- getMenorEstima(home,T,H,Aux), apagar(Aux,[H|T],L),ordenaPorEstima(L,[Aux,home],R).
@@ -505,20 +505,21 @@ veiculosPossiveis([IdEnc|T], Veiculos) :-
         (PT>0,PT=<5)    -> Veiculos=[bicicleta, mota, carro];
         Veiculos=[].
 
-
+makeIdPesoEncomendas([], []).
 makeIdPesoEncomendas([IdEnc|T], L) :-
         getIdMoradaPeso(IdEnc, Id, Peso),
         makeIdPesoEncomendas(T, L1),
-        append(Id/Peso, L1, L).
+        append([Id/Peso], L1, L).
 
-deleteAll([], _, []).
-deleteAll([H|T], Elem, L) :-
-        H==Elem -> deleteAll(T, Elem, L);
-        deleteAll(T, Elem, L1),
-        append(H, L1, L).
+deleteAll([], _, [], []).
+deleteAll([H/HH|T], Elem, L, Acc) :-
+        H==Elem -> deleteAll(T, Elem, L, AccAux), 
+                   append(entregue, AccAux, Acc); % ta mal
+        deleteAll(T, Elem, L1, Acc),
+        append([H/HH], L1, L).
 
 % caminhoTempoCerto(_, _, 0, _)
-caminhoTempoCerto([Id1,Id2], Encomendas, Time, Veiculo, Tempos):-
+caminhoTempoCerto([Id1,Id2|[]], Encomendas, Time, Veiculo, Tempos):-
         getGrafo(Id1, Id2, X),
         getSpecialPesoTotal(Encomendas, Peso),
         calculaTempo(Peso, X, Veiculo, Tempo),
@@ -526,11 +527,14 @@ caminhoTempoCerto([Id1,Id2], Encomendas, Time, Veiculo, Tempos):-
         Tempos=[LastTime].
 caminhoTempoCerto([Id1,Id2|T1], Encomendas, Time, Veiculo, Tempos) :-
         getGrafo(Id1, Id2, X),
-        getPesoTotal(Encomendas, Peso),
+        getSpecialPesoTotal(Encomendas, Peso),
         calculaTempo(Peso, X, Veiculo, Tempo),
         NTime is Time+Tempo,
-        deleteAll(Encomendas, Id1/_, EncomendasR),
-        caminhoTempoCerto([Id2|T1], EncomendasR, NTime, ).
+        deleteAll(Encomendas, Id1, EncomendasR, Aux),
+        length(Aux, Acc),
+        caminhoTempoCerto([Id2|T1], EncomendasR, NTime, Veiculo, TemposAux),
+        append((NTime, Acc), TemposAux, Tempos).
+
 
 
 % -------------------------------- ALGORITMO GERAL - 1 : A* | 2 : Gulosa | 3 : Prof | 4 : Larg | 5 : Prof Limitada
