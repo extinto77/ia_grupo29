@@ -456,14 +456,23 @@ infoPorEntregarEstafeta(IdEstafeta, Bag) :- findall(IdEnc, entrega(IdEnc, IdEsta
 
 
 % -------------------------------- ALGORITMOS DE PROCURA
-caminhoAEstrela([IdEnc], FULL/Custo, Peso, Time, Veiculo) :- encomenda(registada, IdEnc, _, _, _, Morada, _), %rever peso
+caminhoAEstrela([IdEnc], FULL/Custo, _ , Time, Veiculo) :- 
+                                             encomenda(registada, IdEnc, _, _, _, Morada, _), %rever peso
                                              localizacao(Orig,Morada),
-                                             resolve_aestrela(Orig, x2, Caminho/Custo),
-                                             tail(Caminho,T),
-                                             getGrafo(Orig, x2, NewCusto),
-                                             write(NewCusto),write(" "),write(Veiculo),write(" \n"),
-                                             calculaTempo(0, NewCusto, Veiculo, Time),
-        write(Caminho), write("111\n").
+                                             resolve_aestrela(Orig, x2, FULL/Custo),
+                                             calculaTempo(0, Custo, Veiculo, Time).
+
+
+caminhoAEstrela([home,IdEnc|T1], FULL/Custo, Peso, Time, Veiculo) :- 
+                        encomenda(registada, IdEnc, _, _, _, Morada, _),
+                        localizacao(Dest, Morada),
+                        resolve_aestrela(x2, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
+                        calculaTempo(Peso, CustoTmp, Veiculo, Tempo),
+                        caminhoAEstrela([IdEnc|T1], F1/C1, Peso, T3, Veiculo),
+                        Time is Tempo + T3,
+                        tail(F1,FTemp),
+                        append(Caminho, FTemp, FULL),
+                        Custo is C1+CustoTmp.
 
 
 
@@ -475,34 +484,15 @@ caminhoAEstrela([IdEnc,IdEnc2|T1], FULL/Custo, Peso, Time, Veiculo) :- % antes o
                                                 NewPeso is Peso - PesoTmp,
                                                 %((\+member(Dest, FULL)->
                                                 resolve_aestrela(Orig, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
-                                                caminhoAEstrela([IdEnc2|T1], F1/C1, NewPeso, T1, Veiculo),
-                                                write(IdEnc),write("2222\n"),
+                                                caminhoAEstrela([IdEnc2|T1], F1/C1, NewPeso, Temp1, Veiculo),
                                                 tail(F1,FTemp),
                                                 append(Caminho, FTemp, FULL),
                                                 Custo is C1+CustoTmp,
-                                                getGrafo(Orig, x2, NewCusto),
-                                                calculaTempo(PesoTmp, NewCusto, Veiculo, T2),
-                                                Time is T1+T2
-                                                        
-                                                        
-                                                        ,
-        write(Caminho), write("222\n"). /*;
+                                                calculaTempo(NewPeso, CustoTmp, Veiculo, T2),
+                                                Time is Temp1+T2.
+                                                         /*;
                                                % caminhoAEstrela([IdEnc|T1], FULL/Custo, NewPeso, Time, Veiculo)).*/
-
-caminhoAEstrela([_,IdEnc|T1], FULL/Custo, Peso, Time, Veiculo) :- 
-                        encomenda(registada, IdEnc, _, PesoTmp, _, Morada, _),
-                        localizacao(Dest, Morada),
-                        resolve_aestrela(x2, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
-                        getGrafo(Orig, x2, NewCusto),
-                        calculaTempo(Peso, NewCusto, Veiculo, Tempo),
-                        caminhoAEstrela([IdEnc|T1], F1/C1, Peso, T3, Veiculo),
-                        Time is Tempo + T3,
-                        tail(F1,FTemp),
-                        append(Caminho, FTemp, FULL),
-                        Custo is C1+CustoTmp
-                        
-                        ,
-        write(Caminho), write("333\n").
+        
 
 caminhoAEstrela(_, _) :- write("Impossivel realizar entrega").
 
@@ -669,9 +659,8 @@ expande_agulosa_distancia_g(Caminho, ExpCaminhos,Destino) :-
 
 
 resolve_larg(Orig, Dest, Cam/Custo):- goal(Dest),
-                                        resolvebF(X,[[Orig]],Cam),
-                                        getCusto(Cam,Custo),
-                                        reverse(Cam,InvCaminho).
+                                        resolvebF(Dest,[[Orig]],Cam),
+                                        getCusto(Cam,Custo).
 
 
 resolvebF(Dest, [[Dest|T]|_], Sol) :- reverse([Dest|T],Sol).
@@ -687,8 +676,7 @@ getCusto([H1,H2|T], R) :- getGrafo(H1,H2,Aux),getCusto([H2|T], R2) , R is Aux + 
 % --------------------- PROFUNDIDADE
 
 resolve_prof(Inicio, Dest, [Inicio|Caminho]/C) :-
-                profPrimeiro(Inicio, Dest,[Inicio],Caminho,C),
-                reverse(Caminho, InvCaminho).
+                profPrimeiro(Inicio, Dest,[Inicio],Caminho,C).
 
 profPrimeiro(Nodo, Nodo ,  _ , [] , 0).
 profPrimeiro(Nodo, Dest , Hist, [Prox|Caminho], C) :-
@@ -712,7 +700,7 @@ profLimitada(Nodo,Destino,Prof,Limite,[Nodo|Resto]) :-
         getGrafo(Nodo,Prox,_),
         profLimitada(Prox,Destino,Prof2,Limite,Resto).
 
-from(X,X,Inc).
+from(X,X,_).
 from(X,N,Inc) :-
         N2 is N+Inc,
         from(X,N2,Inc).
