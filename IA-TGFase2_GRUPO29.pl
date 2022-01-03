@@ -447,25 +447,58 @@ replace_existing_fact(OldFact, NewFact) :-
 tail([],   []).
 tail([_|T],T).
 
+apagar(_,[],[]).
+apagar(X,[X|R],R).
+apagar(X,[Y|R],[Y|L]) :- X\=Y, apagar(X,R,L).
+
+getIdMoradaPeso(IdEnc, R, Peso) :- encomenda(registada, IdEnc, _, Peso, _, Morada, _),
+                                   localizacao(R,Morada). 
+
+getIdMorada(IdEnc, R) :- encomenda(registada, IdEnc, _, _, _, Morada, _),
+                        localizacao(R,Morada). 
 
 infoPorEntregar(Bag) :- findall(IdEnc, entrega(IdEnc, _, _, _, _, empty), Bag).
 
 
 infoPorEntregarEstafeta(IdEstafeta, Bag) :- findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag).
 
+getPesoTotal([],0).
+getPesoTotal([home|T],Peso) :- getPesoTotal(T,Peso).
+getPesoTotal([IdEnc|T], Peso) :- encomenda(registada,IdEnc, _ , PAux, _ , _ , _),
+                                 getPesoTotal(T,P),
+                                 Peso is P + PAux.
 
+ordenaPorEstima([], R, R2) :- reverse(R,R2).
+ordenaPorEstima([H|T], [], R) :- getMenorEstima(home,T,H,Aux), apagar(Aux,[H|T],L),ordenaPorEstima(L,[Aux,home],R).
+ordenaPorEstima([IdEnc|T], Res, R) :-  Res = [H|_],
+                                       getMenorEstima(H,T,IdEnc,Aux),  
+                                       apagar(Aux,[IdEnc|T],L),ordenaPorEstima(L,[Aux|Res],R).
+
+getMenorEstima(home, [] , R, R).
+getMenorEstima(home,[H|T], Acc, R) :- getIdMorada(H,Id),
+                                      getEstima(x2,Id,R),
+                                      getIdMorada(Acc, Id2), 
+                                      getEstima(x2,Id2,R2),
+                                      R < R2, getMenorEstima(home,T,H,R);
+                                      getMenorEstima(home,T,Acc,R).
+getMenorEstima(_,[],R,R).
+getMenorEstima(IdEnc, [H|T], Acc, R) :- getIdMorada(H,Id),
+                                        getIdMorada(IdEnc,IdInicio),
+                                        getEstima(IdInicio,Id,R),
+                                        getIdMorada(Acc, Id2), 
+                                        getEstima(IdInicio,Id2,R2),
+                                        R < R2, getMenorEstima(home,T,H,R);
+                                        getMenorEstima(IdEnc,T,Acc,R).
 
 % -------------------------------- ALGORITMOS DE PROCURA
 caminhoAEstrela([IdEnc], FULL/Custo, _ , Time, Veiculo) :- 
-                                             encomenda(registada, IdEnc, _, _, _, Morada, _), %rever peso
-                                             localizacao(Orig,Morada),
+                                             getIdMorada(IdEnc, Orig),
                                              resolve_aestrela(Orig, x2, FULL/Custo),
                                              calculaTempo(0, Custo, Veiculo, Time).
 
 
 caminhoAEstrela([home,IdEnc|T1], FULL/Custo, Peso, Time, Veiculo) :- 
-                        encomenda(registada, IdEnc, _, _, _, Morada, _),
-                        localizacao(Dest, Morada),
+                        getIdMorada(IdEnc,Dest),
                         resolve_aestrela(x2, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
                         calculaTempo(Peso, CustoTmp, Veiculo, Tempo),
                         caminhoAEstrela([IdEnc|T1], F1/C1, Peso, T3, Veiculo),
@@ -477,12 +510,9 @@ caminhoAEstrela([home,IdEnc|T1], FULL/Custo, Peso, Time, Veiculo) :-
 
 
 caminhoAEstrela([IdEnc,IdEnc2|T1], FULL/Custo, Peso, Time, Veiculo) :- % antes organixar pela estima,   ver peso etempo 
-                                                encomenda(registada, IdEnc, _, PesoTmp, _, Morada, _),
-                                                encomenda(registada, IdEnc2, _, _, _, Morada2, _),
-                                                localizacao(Orig, Morada),
-                                                localizacao(Dest, Morada2),
+                                                getIdMoradaPeso(IdEnc,Orig,PesoTmp),
+                                                getIdMorada(IdEnc2,Dest),
                                                 NewPeso is Peso - PesoTmp,
-                                                %((\+member(Dest, FULL)->
                                                 resolve_aestrela(Orig, Dest, Caminho/CustoTmp), % depois passar o dobro pq volta para trás
                                                 caminhoAEstrela([IdEnc2|T1], F1/C1, NewPeso, Temp1, Veiculo),
                                                 tail(F1,FTemp),
@@ -490,8 +520,6 @@ caminhoAEstrela([IdEnc,IdEnc2|T1], FULL/Custo, Peso, Time, Veiculo) :- % antes o
                                                 Custo is C1+CustoTmp,
                                                 calculaTempo(NewPeso, CustoTmp, Veiculo, T2),
                                                 Time is Temp1+T2.
-                                                         /*;
-                                               % caminhoAEstrela([IdEnc|T1], FULL/Custo, NewPeso, Time, Veiculo)).*/
         
 
 caminhoAEstrela(_, _) :- write("Impossivel realizar entrega").
