@@ -130,6 +130,7 @@ localizacao(x1,  casteloes/rua_ponte).
 localizacao(x4,  landim/rua_ponte).
 localizacao(x6,  escordo/rua_ponte).
 localizacao(x10, guimaraes/rua_ponte).
+% acabar de dar nome das ruas
 
 goal(X) :- localizacao(X, green_distribution/casteloes).
 

@@ -202,7 +202,7 @@ maisEcologico(Answer) :-
         organizaDuplo(Bag,[],Res), getHead(Res,IdAux,MinAux),getTail(Res,Tail),
         convertDuplo(Tail,IdAux,MinAux,Answer).
 
-
+getTail([], []).
 getTail([_|T],T).
 
 getHead([(IdEnc,L)|_],IdEnc,Min) :- mediaEcologia(L,Min).    
@@ -565,13 +565,38 @@ verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncs, Circuito/InfoCircu
 
 
 
-checkPrazo(DataInicio,Tempos,IdEncs).
+checkPrazo(DataInicio,Tempos,IdEncs):-
+                getPar_Id_DataLimite(IdEncs, P),
+                getOndeEntregou(Tempos, T),
+                finalCheck(DataInicio, P, T).
+
+finalCheck(_, [], _) :- true.
+finalCheck(DataInicio, [H|T], Tempos) :- 
+                finalTemposCheck(DataInicio, H, Tempos), 
+                finalCheck(DataInicio, T, Tempos).
+finalCheck(_, _, _) :- false.
+
+finalTemposCheck(DataInicio, (Id, DataLimite), [(Id, Time, _)|T]):-
+                % datainicio+time <datalimite
+finalTemposCheck(DataInicio, X, [H|T]):- 
+                finalTemposCheck(DataInicio, X, T).
+
+
+getOndeEntregou([], []).
+getOndeEntregou([(X, Tempo, ACC)|T],R) :- 
+                        R > 0, 
+                        getOndeEntregou(T, R1),
+                        append([(X, Tempo, ACC)], R1, R).
+getOndeEntregou([_|T],R) :- getOndeEntregou(T, R).
 
 %encomenda(registada, cadeira, daniel,    2 ,30,  landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
 %entrega(cadeira, empty, empty,        date(2021,11, 4)/time(12,30,0), empty/empty, empty).
-getPar_Id_DataLimite([Id|T],R) :- encomenda(_,Id,_,_,_,_,Prazo),
-                                  entrega(Id,_,_,DataInicio,_,_),
-                                  calculaAvancoTempo(Prazo,DataInicio,DataLimite).
+getPar_Id_DataLimite([], []).
+getPar_Id_DataLimite([Id|T],R) :- encomenda(_,Id,_,_,_,Morada,Prazo),
+                                entrega(Id,_,_,DataInicio,_,_),
+                                calculaAvancoTempo(Prazo,DataInicio,DataLimite),
+                                getPar_Id_DataLimite(T,R1),
+                                append([(Morada, DataLimite)], R1, R).
 
 
 calculaAvancoTempo(date(_,_,Dprazo)/time(Hprazo,Mprazo,_), date(Ai,Mi,Di)/time(Hi,Mi,_),R) :-
@@ -844,3 +869,33 @@ getGrafo(Origem, Destino, Distancia):- grafo(Origem, Destino, Distancia).
 getGrafo(Origem, Destino, Distancia):- !, grafo(Destino, Origem, Distancia).
 
 
+
+
+/*adicionaEstrada(casteloes/rua_igreja, x13, 
+        [[(x1, 2), (x3, 4)], 
+        [(x1, 1), (x2, 2),(x3, 3),(x4, 4),(x5, 5),(x6, 6),
+                (x7, 8),(x9, 9),(x10, 10),(x11, 11),(x12, 12)]
+        ]).*/
+adicionaEstrada(Morada, Id, L) :-
+        localizacao(_, Morada), write("Morada já adicionada"), !;
+        localizacao(Id, _), write("Id já existente"), !;
+        setof(X1, grafo(X1, _, _), Set1),
+        setof(X2, grafo(_, X2, X), Set2),
+        append(Set1, Set2, Set),
+        sort(Set, SetR),
+        length(SetR, Size),
+        length(L, Size),
+        
+        assert(localizacao(Id, Morada)),
+        addGrafo(Id, L, SetR).
+
+addGrafo(_, []) :- write("Caminhos adicionados").
+addGrafo(Id, [[(Ligacao, Custo)], Estimas], Points):- 
+        assert(grafo(Id, Ligacao, Custo)),
+        addEstima(Id, Points, Estimas).
+
+addEstima(_, _, []):- write("Estimas adicionadas").
+addEstima(Id, Points, [(IdDestino, Estima) |T]):-
+        \+member(IdDestino, Points), write("Estima inválida"), !;
+        assert(estima(Id, IdDestino, Estima)),
+        addEstima(Id, Points, T).
