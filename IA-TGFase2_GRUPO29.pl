@@ -673,7 +673,7 @@ checkDiasMes(Ano,Mes,R) :-
 criaCircuito(Caminho,IdEncs) :-
                 getPesoTotal(IdEncs,Peso),
                 getVolumeTotal(IdEncs,Volume),
-                assert(circuito(Caminho,IdEncs,Peso,Volume))..
+                evolucao(circuito(Caminho,IdEncs,Peso,Volume)).
 
 
 
@@ -950,3 +950,30 @@ addEstima(Id, Points, [(IdDestino, Estima) |T]):-
         \+member(IdDestino, Points), write("Estima inválida"), !;
         assert(estima(Id, IdDestino, Estima)),
         addEstima(Id, Points, T).
+
+
+
+%-------------------------------------------------------------------------
+%--------------------------- INVARIANTES
+%------------------------------------------------------------------------
+
++circuito(_,IdEncs,_,_) :: (findall( Ids ,
+                                        (circuito(_,Ids,_,_),
+                                        \+elementsInList(IdEncs,Ids)
+                                        ),S),
+                                length(S,N),
+                                N == 1 ).
+
+elementsInList([],_).
+elementsInList([H|T],L) :- (member(H,L) -> !,fail);
+                           elementsInList(T,L).
+
+evolucao( Termo ) :- findall(Invariante, +Termo::Invariante, Lista),
+                     insercao(Termo),
+                     teste(Lista).
+
+insercao(Termo) :- assert(Termo).
+insercao(Termo) :- retract(Termo), !, fail.
+
+teste([]).
+teste([R|LR]) :- R, teste(LR).
