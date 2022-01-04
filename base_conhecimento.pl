@@ -125,12 +125,18 @@ grafo(x6,  x7,  2.2).
 grafo(x10, x11, 3).
 grafo(x10, x7,  4).
 
+localizacao(x1,  casteloes/rua_ponte_santa).
 localizacao(x2,  casteloes/green_distribution).
-localizacao(x1,  casteloes/rua_ponte).
+localizacao(x3,  landim/rua_nossa_senhora).
 localizacao(x4,  landim/rua_ponte).
-localizacao(x6,  escordo/rua_ponte).
+localizacao(x5,  escordo/rua_jesuita).
+localizacao(x6,  escordo/rua_sapos).
+localizacao(x7,  escordo/rua_feliz).
+localizacao(x8,  escordo/alameda_joao).
+localizacao(x9,  guimaraes/rua_25abril).
 localizacao(x10, guimaraes/rua_ponte).
-% acabar de dar nome das ruas
+localizacao(x11, guimaraes/rua_brito).
+localizacao(x12, guimaraes/avenida_brasil).
 
 goal(X) :- localizacao(X, green_distribution/casteloes).
 
@@ -227,7 +233,7 @@ estima(x12, 11, 1.4).
 estima(x12, x12, 0).
 % ------------------------------------------------
 
-
+%circuito(Caminho,Encomendas,Peso,Volume).
 
 drag(bicicleta, 0.7).
 drag(mota,      0.5).

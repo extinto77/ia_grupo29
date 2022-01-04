@@ -39,6 +39,7 @@ dateStamp(DateI, DateF, Days) :-
         date_time_stamp(DateF, TimeStamp2),
         Days is (TimeStamp2 - TimeStamp1)/86400.
 
+timeElapsed(DI/TI, DF/TF, Ans) :- timeElapsed(DI, TI, DF, TF, Ans).
 timeElapsed(DateI, TimeI, DateF, TimeF, Ans) :-
         dateStamp(DateI, DateF, X1), timeStamp(TimeI, TimeF, X2),
         Ans is X1 + X2.
@@ -444,6 +445,11 @@ replace_existing_fact(OldFact, NewFact) :-
 % ---------Escolher o circuito mais rápido (usando o critério da distância);
 % ---------Escolher o circuito mais ecológico (usando um critério de tempo);
 
+:- dynamic(grafo/3).
+:- dynamic(estima/3).
+:- dynamic(localizacao/2).
+:- dynamic(circuito/4).
+
 getCusto([_],0).
 getCusto([H1,H2|T], R) :- getGrafo(H1,H2,Aux),getCusto([H2|T], R2) , R is Aux + R2.   
 
@@ -468,6 +474,10 @@ infoPorEntregar(Bag) :- findall(IdEnc, entrega(IdEnc, _, _, _, _, empty), Bag).
 
 infoPorEntregarEstafeta(IdEstafeta, Bag) :- findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag).
 
+%------------------------------------------------------------------------------------%
+%---------------  GETTERS DE PESO E VOLUME DADA UMA LISTA DE ENCS ---------------%
+%------------------------------------------------------------------------------------%
+
 getPesoTotal([],0).
 getPesoTotal([home|T],Peso) :- getPesoTotal(T,Peso).
 getPesoTotal([IdEnc|T], Peso) :- encomenda(registada,IdEnc, _ , PAux, _ , _ , _),
@@ -477,6 +487,17 @@ getSpecialPesoTotal([],0).
 getSpecialPesoTotal([_/P1|T], Peso) :- 
         getSpecialPesoTotal(T,PesoAux),
         Peso is P1+PesoAux.
+
+
+getVolumeTotal([],0).
+getVolumeTotal([home|T],Vol) :- getVolumeTotal(T,Vol).
+getVolumeTotal([IdEnc|T], Vol) :- encomenda(registada,IdEnc, _ , _, VolAux , _ , _),
+                                 getVolumeTotal(T,V),
+                                 Vol is V + VolAux.
+
+%------------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------------%
                         
 ordenaPorEstima([], R, R2) :- reverse(R,R2).
 ordenaPorEstima([H|T], [], R) :- getMenorEstima(home,T,H,Aux), apagar(Aux,[H|T],L),ordenaPorEstima(L,[Aux,home],R).
@@ -541,12 +562,21 @@ caminhoTempoCerto([Id1,Id2|T1], Encomendas, Time, Veiculo, Tempos) :-
 
 
 criarCirtcuito(L, Algoritmo, Veiculo, Circuito/X/Custo):- 
-                encontraCircuito(L, Algoritmo, Circuito/Custo),
+                encontraCircuito([home|L], Algoritmo, Circuito/Custo),
                 makeIdPesoEncomendas(L, L1),
                 caminhoTempoCerto(Circuito, L1, 0, Veiculo, X).
 
+verificaAnterior([], _, []). 
+verificaAnterior([H|T], DataInicio, L):-
+        entrega(H, _, _, DataEnc, _, _),
+        timeElapsed(DataEnc, DataInicio, Ans), 
+        (Ans>=0 -> verificaAnterior(T, DataInicio, L1),
+                        append(H,L1,L);
+        verificaAnterior(T, DataInicio, L)
+        ).
 
-verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncs, Circuito/InfoCircuito/Custo) :- %escolhe automatico o veiculo e cria rota
+verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncsA, Circuito/InfoCircuito/Custo) :- %escolhe automatico o veiculo e cria rota
+        verificaAnterior(IdEncsA, DataInicio, IdEncs),
         veiculosPossiveis(IdEncs, Veiculos),
         length(Veiculos, Val),
         (
@@ -559,48 +589,54 @@ verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncs, Circuito/InfoCircu
         ).
         %),write(Circuito/InfoCircuito/Custo).
 
-
-
-
-
-
+%------------------------------------------------------------------------------------%
+%---------------  VERIFICAR SE AS ENTREGAS SAO FEITAS DENTRO DO PRAZO ---------------%
+%------------------------------------------------------------------------------------%
 
 checkPrazo(DataInicio,Tempos,IdEncs):-
                 getPar_Id_DataLimite(IdEncs, P),
-                getOndeEntregou(Tempos, T),
+                getOndeEntregou(Tempos, T),!,
                 finalCheck(DataInicio, P, T).
 
-finalCheck(_, [], _) :- true.
+
+finalCheck(_, [], _).
 finalCheck(DataInicio, [H|T], Tempos) :- 
                 finalTemposCheck(DataInicio, H, Tempos), 
                 finalCheck(DataInicio, T, Tempos).
-finalCheck(_, _, _) :- false.
+finalCheck(_, _, _) :- !, false.
 
-finalTemposCheck(DataInicio, (Id, DataLimite), [(Id, Time, _)|T]):-
-                % datainicio+time <datalimite
-finalTemposCheck(DataInicio, X, [H|T]):- 
+finalTemposCheck(_, _, []).
+finalTemposCheck(DataInicio, (Id, DataLimite), [(Id, Time)|T]) :-
+                convertTimeFromHoras(Time,InfoTime),
+                calculaAvancoTempo(date(0,0,0)/InfoTime, DataInicio, DataFim),
+                timeElapsed(DataFim, DataLimite, Ans),
+                Ans>=0 -> finalTemposCheck(DataInicio, (Id, DataLimite), T);
+                !,false.
+finalTemposCheck(DataInicio, X, [_|T]):- 
                 finalTemposCheck(DataInicio, X, T).
 
 
 getOndeEntregou([], []).
-getOndeEntregou([(X, Tempo, ACC)|T],R) :- 
-                        R > 0, 
+getOndeEntregou([(X, Tempo, NEntregas)|T],R) :- 
+                        NEntregas > 0, 
                         getOndeEntregou(T, R1),
-                        append([(X, Tempo, ACC)], R1, R).
+                        append([(X, Tempo)], R1, R).
 getOndeEntregou([_|T],R) :- getOndeEntregou(T, R).
 
-%encomenda(registada, cadeira, daniel,    2 ,30,  landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
-%entrega(cadeira, empty, empty,        date(2021,11, 4)/time(12,30,0), empty/empty, empty).
+
 getPar_Id_DataLimite([], []).
 getPar_Id_DataLimite([Id|T],R) :- encomenda(_,Id,_,_,_,Morada,Prazo),
                                 entrega(Id,_,_,DataInicio,_,_),
                                 calculaAvancoTempo(Prazo,DataInicio,DataLimite),
                                 getPar_Id_DataLimite(T,R1),
-                                append([(Morada, DataLimite)], R1, R).
+                                localizacao(X, Morada),
+                                append([(X, DataLimite)], R1, R).
 
 
-calculaAvancoTempo(date(_,_,Dprazo)/time(Hprazo,Mprazo,_), date(Ai,Mi,Di)/time(Hi,Mi,_),R) :-
-        transpoeMinutos(Mi,Mprazo,Mfinal,Ht),
+calculaAvancoTempo(Prazo, DataInicio,R) :-
+        Prazo = date(_,_,Dprazo)/time(Hprazo,Mprazo,_),
+        DataInicio = date(Ai,Mi,Di)/time(Hi,MiI,_),
+        transpoeMinutos(MiI,Mprazo,Mifinal,Ht),
         Haux is Hprazo + Ht,
         transpoeHoras(Hi,Haux,Hfinal,Dt),
         Daux is Dprazo + Dt,
@@ -609,7 +645,7 @@ calculaAvancoTempo(date(_,_,Dprazo)/time(Hprazo,Mprazo,_), date(Ai,Mi,Di)/time(H
         Maux is Mi + Mt,
         transpoeMeses(Maux,Mfinal,At),
         Afinal is Ai + At,
-        R = date(Afinal,Mfinal,Dfinal)/time(Hfinal,Mfinal,0).
+        R = date(Afinal,Mfinal,Dfinal)/time(Hfinal,Mifinal,0).
                                 
                                 
 transpoeMinutos(Mi,Mp,Mf,T) :- (Mi + Mp >= 60 -> Mf is Mi + Mp - 60, T = 1 ); 
@@ -627,10 +663,24 @@ transpoeMeses(Mi,Mf,T) :- (Mi > 12 ->  Mf is Mi - 12, T = 1);
 
 checkDiasMes(Ano,Mes,R) :- 
                         Resto is Mes mod 2, RestoAno is Ano mod 4,
-                        (Resto == 1 -> R = 31;
-                        (Mes == 2, RestoAno == 0) -> R = 29;
+                        ((Mes == 2, RestoAno == 0) -> R = 29;
                         Mes == 2 -> R = 28;
+                        (Resto == 1, Mes =< 7) -> R = 31;
+                        (Resto == 0, Mes =< 7) -> R = 30;
+                        (Resto == 0, Mes > 7) -> R = 31;         
                         R = 30).
+
+criaCircuito(Caminho,IdEncs) :-
+                getPesoTotal(IdEncs,Peso),
+                getVolumeTotal(IdEncs,Volume),
+                assert(circuito(Caminho,IdEncs,Peso,Volume))..
+
+
+
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+%------------------------------------------------------------------------
+
 
 iniciarEntrega(_, [], _):-write("Informação Atulizada!").
 iniciarEntrega(IdEstafeta, [IdEnc|T], Veiculo):-
@@ -687,7 +737,8 @@ separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed
         % getMoradasPeso(Bag, Bag1),
         % joinMoradas(Bag1, Bag2),
         % separarVoltas(Bag, RET),
-        % getTotalPeso(Bag, X).
+        % getPesoTotal(Bag, X).
+        % getVolumeTotal(Bag,X)
         % ((X>100, darSplit, !); (X>20, veiculo é carro ); (X>5, veiculo é mota ); (X>=0, veiculo é bicicleta)),
         % alterarEstadoParaEmDistribuicao,
 
@@ -880,7 +931,7 @@ adicionaEstrada(Morada, Id, L) :-
         localizacao(_, Morada), write("Morada já adicionada"), !;
         localizacao(Id, _), write("Id já existente"), !;
         setof(X1, grafo(X1, _, _), Set1),
-        setof(X2, grafo(_, X2, X), Set2),
+        setof(X2, grafo(_, X2, _), Set2),
         append(Set1, Set2, Set),
         sort(Set, SetR),
         length(SetR, Size),
