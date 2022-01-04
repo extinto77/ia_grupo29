@@ -1,7 +1,8 @@
 
 :- [base_conhecimento].
+:- use_module(library(statistics)).
 
-:- op( 900,xfy,'::' ).
+:- op( 900,xfy,'::').
 
 :- dynamic(estafeta/3).
 :- dynamic(cliente/2).
@@ -49,7 +50,7 @@ convertTimeFromDias(Val, Date/Time) :-
         rounding(Dec2*60, M, _),
         Date = date(0, 0, D), Time = time(H, M, 0).
 
-% dizer que prazo máximo é de 23 horas 59 min e 59 sec
+% converte no máximo 23 horas 59 min e 59 sec
 convertTimeFromHoras(Val, Time) :-
         Val>0, Val<24, rounding(Val, H, Dec1),
         rounding(Dec1*60, M, Dec2), 
@@ -424,7 +425,6 @@ calcPesoEnc([IdEnc|T],Acc,R) :- encomenda(_,IdEnc, _, Peso, _, _ ,_), Acc2 is Ac
 % ---------------------------------------------------------------------------------------------------------             
 
 
-
 replace_existing_fact(OldFact, NewFact) :-
     retract(OldFact),
     assert(NewFact).
@@ -447,8 +447,11 @@ replace_existing_fact(OldFact, NewFact) :-
 getCusto([_],0).
 getCusto([H1,H2|T], R) :- getGrafo(H1,H2,Aux),getCusto([H2|T], R2) , R is Aux + R2.   
 
-tail([],   []).
+tail([], []).
 tail([_|T],T).
+
+head([], []).
+head([H|_], H).
 
 apagar(_,[],[]).
 apagar(X,[X|R],R).
@@ -500,10 +503,11 @@ getMenorEstima(IdEnc, [H|T], Acc, R) :- getIdMorada(H,Id),
 
 veiculosPossiveis([IdEnc|T], Veiculos) :-
         getPesoTotal([IdEnc|T], PT),
-        (PT=<100,PT>20) -> Veiculos=[carro];
-        (PT=<20,PT>5)   -> Veiculos=[mota, carro];
-        (PT>0,PT=<5)    -> Veiculos=[bicicleta, mota, carro];
-        Veiculos=[].
+        ((PT=<100,PT>20) -> Veiculos=[carro];
+         (PT=<20,PT>5)   -> Veiculos=[mota, carro];
+         (PT>0,PT=<5)    -> Veiculos=[bicicleta, mota, carro];
+         Veiculos=[]
+        ).
 
 makeIdPesoEncomendas([], []).
 makeIdPesoEncomendas([IdEnc|T], L) :-
@@ -511,29 +515,159 @@ makeIdPesoEncomendas([IdEnc|T], L) :-
         makeIdPesoEncomendas(T, L1),
         append([Id/Peso], L1, L).
 
-deleteAll([], _, [], []).
-deleteAll([H/HH|T], Elem, L, Acc) :-
-        H==Elem -> deleteAll(T, Elem, L, AccAux), 
-                   append(entregue, AccAux, Acc); % ta mal
-        deleteAll(T, Elem, L1, Acc),
-        append([H/HH], L1, L).
+apagatudo([],_,[]).
+apagatudo([X/_|R],X,L) :- apagatudo(R,X,L).
+apagatudo([Y|R],X,[Y|L]) :- Y = H/_, X\=H, apagatudo(R,X,L).
 
 % caminhoTempoCerto(_, _, 0, _)
 caminhoTempoCerto([Id1,Id2|[]], Encomendas, Time, Veiculo, Tempos):-
         getGrafo(Id1, Id2, X),
         getSpecialPesoTotal(Encomendas, Peso),
         calculaTempo(Peso, X, Veiculo, Tempo),
-        LastTime is Time+Tempo,
-        Tempos=[LastTime].
+        arredondar(Tempo,T, 3),
+        LastTime is Time+T,
+        Tempos=[(x2, LastTime)].
 caminhoTempoCerto([Id1,Id2|T1], Encomendas, Time, Veiculo, Tempos) :-
         getGrafo(Id1, Id2, X),
         getSpecialPesoTotal(Encomendas, Peso),
         calculaTempo(Peso, X, Veiculo, Tempo),
-        NTime is Time+Tempo,
-        deleteAll(Encomendas, Id1, EncomendasR, Aux),
-        length(Aux, Acc),
+        arredondar(Tempo,T, 3),
+        NTime is Time+T,
+        apagatudo(Encomendas, Id2, EncomendasR),
+        length(Encomendas, Acc1),length(EncomendasR,Acc2),
+        Acc is Acc1 - Acc2,
         caminhoTempoCerto([Id2|T1], EncomendasR, NTime, Veiculo, TemposAux),
-        append((NTime, Acc), TemposAux, Tempos).
+        append([(Id2, NTime, Acc)], TemposAux, Tempos).
+
+
+criarCirtcuito(L, Algoritmo, Veiculo, Circuito/X/Custo):- 
+                encontraCircuito(L, Algoritmo, Circuito/Custo),
+                makeIdPesoEncomendas(L, L1),
+                caminhoTempoCerto(Circuito, L1, 0, Veiculo, X).
+
+
+verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncs, Circuito/InfoCircuito/Custo) :- %escolhe automatico o veiculo e cria rota
+        veiculosPossiveis(IdEncs, Veiculos),
+        length(Veiculos, Val),
+        (
+        (Val==1) -> 
+                criarCirtcuito(IdEncs, Algoritmo, carro, Circuito/InfoCircuito/Custo);
+        (Val==3 , RapidoEcologico==ecologico, criarCirtcuito(IdEncs, Algoritmo, bicicleta, Circuito1/InfoCircuito/Custo), 
+        checkPrazo(DataInicio, InfoCircuito, IdEncs)) -> 
+                Circuito=Circuito1;
+        criarCirtcuito(IdEncs, Algoritmo, mota, Circuito/InfoCircuito/Custo)
+        ).
+        %),write(Circuito/InfoCircuito/Custo).
+
+
+
+
+
+
+
+checkPrazo(DataInicio,Tempos,IdEncs).
+
+%encomenda(registada, cadeira, daniel,    2 ,30,  landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
+%entrega(cadeira, empty, empty,        date(2021,11, 4)/time(12,30,0), empty/empty, empty).
+getPar_Id_DataLimite([Id|T],R) :- encomenda(_,Id,_,_,_,_,Prazo),
+                                  entrega(Id,_,_,DataInicio,_,_),
+                                  calculaAvancoTempo(Prazo,DataInicio,DataLimite).
+
+
+calculaAvancoTempo(date(_,_,Dprazo)/time(Hprazo,Mprazo,_), date(Ai,Mi,Di)/time(Hi,Mi,_),R) :-
+        transpoeMinutos(Mi,Mprazo,Mfinal,Ht),
+        Haux is Hprazo + Ht,
+        transpoeHoras(Hi,Haux,Hfinal,Dt),
+        Daux is Dprazo + Dt,
+        checkDiasMes(Ai,Mi,Dd),
+        transpoeDias(Dd,Di,Daux,Dfinal,Mt),
+        Maux is Mi + Mt,
+        transpoeMeses(Maux,Mfinal,At),
+        Afinal is Ai + At,
+        R = date(Afinal,Mfinal,Dfinal)/time(Hfinal,Mfinal,0).
+                                
+                                
+transpoeMinutos(Mi,Mp,Mf,T) :- (Mi + Mp >= 60 -> Mf is Mi + Mp - 60, T = 1 ); 
+                                Mf is Mi + Mp, T = 0.
+
+transpoeHoras(Hi,Hp,Hf,T) :- (Hi + Hp >= 24 -> Hf is Hi + Hp - 24, T = 1); 
+                                Hf is Hi + Hp, T = 0.
+
+transpoeDias(Dd,Di,Dp,Df,T) :- (Di + Dp > Dd -> Df is Di + Dp - Dd, T = 1); 
+                                Df is Di + Dp, T = 0.
+
+transpoeMeses(Mi,Mf,T) :- (Mi > 12 ->  Mf is Mi - 12, T = 1);
+                                Mf = Mi, T = 0.
+                
+
+checkDiasMes(Ano,Mes,R) :- 
+                        Resto is Mes mod 2, RestoAno is Ano mod 4,
+                        (Resto == 1 -> R = 31;
+                        (Mes == 2, RestoAno == 0) -> R = 29;
+                        Mes == 2 -> R = 28;
+                        R = 30).
+
+iniciarEntrega(_, [], _):-write("Informação Atulizada!").
+iniciarEntrega(IdEstafeta, [IdEnc|T], Veiculo):-
+        replace_existing_fact(entrega(IdEnc, empty, empty, DI, DF, A), 
+                                entrega(IdEnc, IdEstafeta, Veiculo, DI, DF, A)),
+        replace_existing_fact(encomenda(registada, IdEnc, C, P, V, M, P), 
+                                encomenda(distribuicao, IdEnc, C, P, V, M, P)),
+        iniciarEntrega(IdEstafeta, T, Veiculo).
+
+
+/*
+getMoradasPeso([], []).
+getMoradasPeso([IdEnc|T], L) :- encomenda(registada, IdEnc, _, Peso, _, Morada1, _), 
+                                getMoradasPeso(T, L2), 
+                                append(Morada1/[IdEnc/Peso], L2, L).
+getMoradasPeso([_|T], X) :- getMoradasPeso(T, X).
+
+joinMoradas1([], _).
+joinMoradas1([Morada/Info| T], L) :- \+member((Morada/_), T), joinMoradas1(T, Y), append(Morada/Info, Y, L).
+joinMoradas1([Morada/Info| T], L) :- add1(Morada/Info, T, L). 
+
+joinMoradas1([Morada/Info| T], L) :- \+member((Morada/_), T), joinMoradas1(T, Y), append(Morada/Info, Y, L).
+joinMoradas1([Morada/Info| T], L) :- add1(Morada/Info, T, L). 
+
+add1(Morada/Info, [], [Morada/Info]).
+add1(Morada/Info1, [Morada/Info2|_], L) :- append(Info1, Info2, Info), [Info|L].
+add1(Morada/Info, [H|T], _) :- add1(Morada/Info, T, Y), append(H, Y).
+
+
+joinMoradas([] , L , L).
+joinMoradas([Morada/H|T], Acc, X) :- adicionaMorada(Morada/H, Acc,[],Res).
+                                     joinMoradas(T,Res,X).
+
+
+adicionaMorada(Morada/H, [], Acc, [Morada/H|Acc]).
+adicionaMorada(Morada/H1, [Morada/H2 | T], Acc, X) :- append(H1,H2,Res),
+                                                      append(Morada/Res, T ,R),
+                                                      append(R,Acc,X).
+adicionaMorada(H1 , [H2 | T], Acc,X) :- append(H2,Acc,Res),
+                                        adicionaMorada(H1,T,Res,X).
+                     
+moradaPertence(_, []) :- false.
+moradaPertence(Morada,[Morada/_ | T]).
+moradaPertence(Morada,[Morada1/_ | T]) :- moradaPertence(Morada,T). 
+
+separarVoltas(L, X) :- encomenda(registada, IdEnc, _, Peso, _, _, _), setof(L, L, Bag), separarVoltas(Bag, X, 0). % ta mal o setof
+separarVoltas([],L, _).
+separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed) :- 
+                (TotUsed+Peso > 100) -> separarVoltas(T, [L2|L], 0);
+                                        append(IdEnc,L2,L1), separarVoltas(T, [L2|L], TotUsed+Peso).
+
+% makeCircuito(IdEstafeta) :-
+        % findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag),
+        % getMoradasPeso(Bag, Bag1),
+        % joinMoradas(Bag1, Bag2),
+        % separarVoltas(Bag, RET),
+        % getTotalPeso(Bag, X).
+        % ((X>100, darSplit, !); (X>20, veiculo é carro ); (X>5, veiculo é mota ); (X>=0, veiculo é bicicleta)),
+        % alterarEstadoParaEmDistribuicao,
+
+        % resolve_aestrela().
+*/
 
 
 
@@ -578,55 +712,6 @@ calculaTempo(Peso, Distancia, Veiculo, Time) :-
 
 
 
-/*
-getMoradasPeso([], []).
-getMoradasPeso([IdEnc|T], L) :- encomenda(registada, IdEnc, _, Peso, _, Morada1, _), 
-                                getMoradasPeso(T, L2), 
-                                append(Morada1/[IdEnc/Peso], L2, L).
-getMoradasPeso([_|T], X) :- getMoradasPeso(T, X).
-
-joinMoradas1([], _).
-joinMoradas1([Morada/Info| T], L) :- \+member((Morada/_), T), joinMoradas1(T, Y), append(Morada/Info, Y, L).
-joinMoradas1([Morada/Info| T], L) :- add1(Morada/Info, T, L). 
-
-add1(Morada/Info, [], [Morada/Info]).
-add1(Morada/Info1, [Morada/Info2|_], L) :- append(Info1, Info2, Info), [Info|L].
-add1(Morada/Info, [H|T], _) :- add1(Morada/Info, T, Y), append(H, Y).
-
-
-joinMoradas([] , L , L).
-joinMoradas([Morada/H|T], Acc, X) :- adicionaMorada(Morada/H, Acc,[],Res).
-                                     joinMoradas(T,Res,X).
-
-
-adicionaMorada(Morada/H, [], Acc, [Morada/H|Acc]).
-adicionaMorada(Morada/H1, [Morada/H2 | T], Acc, X) :- append(H1,H2,Res),
-                                                      append(Morada/Res, T ,R),
-                                                      append(R,Acc,X).
-adicionaMorada(H1 , [H2 | T], Acc,X) :- append(H2,Acc,Res),
-                                        adicionaMorada(H1,T,Res,X).
-                     
-moradaPertence(_, []) :- false.
-moradaPertence(Morada,[Morada/_ | T]).
-moradaPertence(Morada,[Morada1/_ | T]) :- moradaPertence(Morada,T). 
-
-separarVoltas(L, X) :- encomenda(registada, IdEnc, _, Peso, _, _, _), setof(L, L, Bag), separarVoltas(Bag, X, 0). % ta mal o setof
-separarVoltas([],L, _).
-separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed) :- 
-                (TotUsed+Peso > 100) -> separarVoltas(T, [L2|L], 0);
-                                        append(IdEnc,L2,L1), separarVoltas(T, [L2|L], TotUsed+Peso).
-
-% makeCircuito(IdEstafeta) :-
-        % findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag),
-        % getMoradasPeso(Bag, Bag1),
-        % joinMoradas(Bag1, Bag2),
-        % separarVoltas(Bag, RET),
-        % getTotalPeso(Bag, X).
-        % ((X>100, darSplit, !); (X>20, veiculo é carro ); (X>5, veiculo é mota ); (X>=0, veiculo é bicicleta)),
-        % alterarEstadoParaEmDistribuicao,
-
-        % resolve_aestrela().
-*/
 
 %--------------------------------- A ESTRELA
 
