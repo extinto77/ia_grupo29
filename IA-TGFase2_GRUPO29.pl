@@ -682,7 +682,7 @@ criaCircuito(Caminho,IdEncs) :-
 %------------------------------------------------------------------------
 
 
-iniciarEntrega(_, [], _):-write("Informação Atulizada!").
+iniciarEntrega(_, [], _):-write("Informação Atualizada!").
 iniciarEntrega(IdEstafeta, [IdEnc|T], Veiculo):-
         replace_existing_fact(entrega(IdEnc, empty, empty, DI, DF, A), 
                                 entrega(IdEnc, IdEstafeta, Veiculo, DI, DF, A)),
