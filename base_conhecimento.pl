@@ -30,8 +30,8 @@ cliente(daniel,  6).
 cliente(joao,    2).
 cliente(caldas,  2).
 cliente(abacao,  7).
-cliente(joana,   1).
-cliente(freitas, 4).
+cliente(joana,   4).
+cliente(freitas, 6).
 cliente(claudia, 2).
 
 % ----------- estafeta(id, nrEntregas, avaliacao) /3
@@ -43,12 +43,18 @@ estafeta(amazon,     2, 3.16 ).
 
 % ----------- encomenda(Estado, Id, IdClinet, Peso, Volume, Freguesia/Morada, prazo) /7
 
-encomenda(registada, cadeira, daniel,    2 ,30,  landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
+encomenda(registada, cadeira, daniel,    2 ,30,  casteloes/rua_ponte_santa,  date(0,0,0)/time(12,0,0)).
 encomenda(registada, gorro, joao,        1, 10,  landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
-encomenda(registada, folha, daniel,      0.1 ,5, landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
-encomenda(registada, portao, freitas,    16 ,30, escordo/rua_ponte, date(0,0,1)/time(12,0,0)).
-encomenda(registada, sal, abacao,        2 ,30,  escordo/rua_ponte, date(0,0,0)/time(12,0,0)).
-encomenda(registada, joelheiras, abacao, 80 ,30, escordo/rua_ponte, date(0,0,0)/time(12,0,0)).
+encomenda(registada, folha, daniel,      0.1 ,5, landim/rua_nossa_senhora,  date(0,0,0)/time(12,0,0)).
+encomenda(registada, portao, freitas,    16 ,30, escordo/rua_jesuita, date(0,0,1)/time(12,0,0)).
+encomenda(registada, sal, abacao,        2 ,30,  escordo/rua_sapos, date(0,0,0)/time(12,0,0)).
+encomenda(registada, joelheiras, abacao, 80 ,30, escordo/rua_feliz, date(0,0,0)/time(12,0,0)).
+encomenda(registada, camara, freitas,    2  ,4 , escordo/alameda_joao, date(0,0,0)/time(1,0,0)).
+encomenda(registada, comando, freitas,   3  ,5 , guimaraes/rua_25abril, date(0,0,3)/time(0,0,0)).
+encomenda(registada, estojo, joana,      8  ,10 , guimaraes/rua_ponte, date(0,0,10)/time(0,0,0)).
+encomenda(registada, hub, joana,         1  ,2 , guimaraes/rua_brito, date(0,0,2)/time(0,0,0)).
+encomenda(registada, calculadora, joana, 10 ,7 , guimaraes/avenida_brasil, date(0,0,0)/time(20,0,0)).
+
 
 encomenda(distribuicao, corta_unhas, freitas, 2 ,30,  landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
 encomenda(distribuicao, queijo, abacao,       1, 10,  landim/rua_ponte,  date(0,0,0)/time(12,0,0)).
@@ -80,6 +86,11 @@ entrega(folha, empty, empty,          date(2021,2, 3)/time(11,30,0),  empty/empt
 entrega(portao, empty, empty,         date(2021,3, 10)/time(6,30,0),  empty/empty, empty).
 entrega(sal, empty, empty,            date(2021,12, 23)/time(7,54,0), empty/empty, empty).
 entrega(joelheiras, empty, empty,     date(2021,10, 4)/time(1,30,0),  empty/empty, empty).
+entrega(camara, empty, empty,         date(2022,1,4)/time(22,34,0),   empty/empty, empty).
+entrega(comando, empty, empty,        date(2022,1,4)/time(22,34,0),   empty/empty, empty).
+entrega(estojo, empty, empty,         date(2022,1,4)/time(22,34,0),   empty/empty, empty).
+entrega(hub, empty, empty,            date(2022,1,4)/time(22,34,0),   empty/empty, empty).
+entrega(calculadora, empty, empty,    date(2022,1,4)/time(22,34,0),   empty/empty, empty).
 
 entrega(corta_unhas, ups, bicicleta,  date(2021,10, 4)/time(1,30,0),  empty/empty, empty).
 entrega(queijo, ctt, mota,            date(2021, 1,14)/time(2,10,0),  empty/empty, empty).
@@ -227,13 +238,17 @@ estima(x10, x10, 0).
 estima(x11, x10, 1.7).
 estima(x12, x10, 1.2).
 % -----------------
-estima(x11, 11, 0).
-estima(x12, 11, 1.4).
+estima(x11, x11, 0).
+estima(x12, x11, 1.4).
 % -----------------
 estima(x12, x12, 0).
 % ------------------------------------------------
 
 %circuito(Caminho,Encomendas,Peso,Volume).
+circuito([x2,x4,x2], [luvas], 2, 10).
+circuito([x2,x4,x2], [cona], 2 ,10).
+circuito([x2,x1,x2], [fixe],  4 ,15).
+circuito([x2,x3,x2], [ola],  8 ,15).
 
 drag(bicicleta, 0.7).
 drag(mota,      0.5).
