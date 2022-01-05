@@ -347,7 +347,14 @@ calcularMediaSatisfacaoEstafeta(IdEstafeta, Answer) :-
                     validarAvaliacao(X, NewX), averageList(NewX, Val), arredondar(Val, Answer, 2).
 
 
-arredondar(X,Y,D) :- Z is X * 10^D, round(Z, ZA), Y is ZA / 10^D.
+arredondar(X,AA,D) :- Z is X * 10^D, round(Z, ZA), Y is ZA / 10^D,
+                (
+                D==1 -> Float = '~1f';
+                D==2 -> Float = '~2f';
+                Float = '~3f'
+                ),
+                format(atom(A), Float, [Y]),
+                atom_number(A, AA).
 
 validarAvaliacao([], []).
 validarAvaliacao([Head|Tail], List) :- 
@@ -545,15 +552,15 @@ caminhoTempoCerto([Id1,Id2|[]], Encomendas, Time, Veiculo, Tempos):-
         getGrafo(Id1, Id2, X),
         getSpecialPesoTotal(Encomendas, Peso),
         calculaTempo(Peso, X, Veiculo, Tempo),
-        arredondar(Tempo,T, 3),
-        LastTime is Time+T,
-        Tempos=[(x2, LastTime)].
+        LastTime is Time+Tempo,
+        arredondar(LastTime,T, 3),
+        Tempos=[(x2, T)].
 caminhoTempoCerto([Id1,Id2|T1], Encomendas, Time, Veiculo, Tempos) :-
         getGrafo(Id1, Id2, X),
         getSpecialPesoTotal(Encomendas, Peso),
         calculaTempo(Peso, X, Veiculo, Tempo),
-        arredondar(Tempo,T, 3),
-        NTime is Time+T,
+        T is Time+Tempo,
+        arredondar(T,NTime,3),
         apagatudo(Encomendas, Id2, EncomendasR),
         length(Encomendas, Acc1),length(EncomendasR,Acc2),
         Acc is Acc1 - Acc2,
@@ -561,7 +568,7 @@ caminhoTempoCerto([Id1,Id2|T1], Encomendas, Time, Veiculo, Tempos) :-
         append([(Id2, NTime, Acc)], TemposAux, Tempos).
 
 
-criarCirtcuito(L, Algoritmo, Veiculo, Circuito/X/Custo):- 
+criarCircuito(L, Algoritmo, Veiculo, Circuito/X/Custo):- 
                 encontraCircuito([home|L], Algoritmo, Circuito/Custo),
                 makeIdPesoEncomendas(L, L1),
                 caminhoTempoCerto(Circuito, L1, 0, Veiculo, X).
@@ -571,23 +578,90 @@ verificaAnterior([H|T], DataInicio, L):-
         entrega(H, _, _, DataEnc, _, _),
         timeElapsed(DataEnc, DataInicio, Ans), 
         (Ans>=0 -> verificaAnterior(T, DataInicio, L1),
-                        append(H,L1,L);
+                        append([H],L1,L);
         verificaAnterior(T, DataInicio, L)
         ).
 
-verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncsA, Circuito/InfoCircuito/Custo) :- %escolhe automatico o veiculo e cria rota
+verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncsA, Circuito/InfoCircuito/Custo/Veiculo/Prazo) :- %escolhe automatico o veiculo e cria rota
         verificaAnterior(IdEncsA, DataInicio, IdEncs),
         veiculosPossiveis(IdEncs, Veiculos),
         length(Veiculos, Val),
         (
         (Val==1) -> 
-                criarCirtcuito(IdEncs, Algoritmo, carro, Circuito/InfoCircuito/Custo);
-        (Val==3 , RapidoEcologico==ecologico, criarCirtcuito(IdEncs, Algoritmo, bicicleta, Circuito1/InfoCircuito/Custo), 
+                criarCircuito(IdEncs, Algoritmo, carro, Circuito/InfoCircuito/Custo), Veiculo = carro;
+        (Val==3 , RapidoEcologico==ecologico, criarCircuito(IdEncs, Algoritmo, bicicleta, Circuito1/InfoCircuito/Custo), 
         checkPrazo(DataInicio, InfoCircuito, IdEncs)) -> 
-                Circuito=Circuito1;
-        criarCirtcuito(IdEncs, Algoritmo, mota, Circuito/InfoCircuito/Custo)
-        ).
+                Circuito=Circuito1,Veiculo = bicicleta;
+        criarCircuito(IdEncs, Algoritmo, mota, Circuito/InfoCircuito/Custo), Veiculo = mota
+        ),
+        (checkPrazo(DataInicio, InfoCircuito, IdEncs) -> Prazo = "Dentro de Prazo"; Prazo = "Fora de Prazo").
         %),write(Circuito/InfoCircuito/Custo).
+
+
+
+mainSingle(RapidoEcologico, Algoritmo, DataInicio, IdEnc, X):-
+        write(IdEnc), write(" : "),
+        verificaPrazos(RapidoEcologico, Algoritmo, DataInicio, [IdEnc], X).
+
+mainAllSingle(RapidoEcologico, Algoritmo, DataInicio):- % entregar todas sozinhas
+        findall(Id, encomenda(registada , Id , _ , _ , _ , _ , _), S),
+        mainAllSingleAux(S, RapidoEcologico, Algoritmo, DataInicio).
+
+mainAllSingleAux1([],_, []).
+mainAllSingleAux1([Id|T],RapidoEcologico,Algoritmo,DataInicio, [X|X1]) :- 
+        mainSingle(RapidoEcologico, Algoritmo, DataInicio, Id, X), !,
+        mainAllSingleAux1(T,RapidoEcologico,Algoritmo,DataInicio, X1);
+        mainAllSingleAux1(T,RapidoEcologico,Algoritmo,DataInicio, X1).
+mainAllSingleAux([],_). 
+mainAllSingleAux([Id|T],RapidoEcologico,Algoritmo,DataInicio) :- 
+                        mainSingle(RapidoEcologico, Algoritmo, DataInicio, Id, X), !, escreveInfo(X),
+                        mainAllSingleAux(T,RapidoEcologico,Algoritmo,DataInicio);
+                        mainAllSingleAux(T,RapidoEcologico,Algoritmo,DataInicio).
+
+escreveInfo(X/Y/Z/W/G) :- write("\n"), write("\tCaminho -> "),write(X), write("\n"),
+                        write("\tEntregas -> "), write(Y), write("\n"), 
+                        write("\tCusto -> "), write(Z), write("\n"),
+                        write("\tVeículo -> "), write(W), write("\n"),
+                        write("\tEntregue "), write(G), write("\n").
+
+
+
+mainMulti(RapidoEcologico, Algoritmo, DataInicio, IdEncs):- % escolher que encomendas entregar
+        verificaPrazos(RapidoEcologico, Algoritmo, DataInicio, IdEncs, X),
+        write(IdEncs), write(" : "),escreveInfo(X).
+
+
+autoMainMulti(RapidoEcologico, Algoritmo, DataInicio):-
+        findall(Ids, encomenda(registada , Ids, _ , _ , _ , _ , _), Bag),
+        getPesoTotal(Bag, Peso),
+        (Peso=<100-> mainMulti(RapidoEcologico, Algoritmo, DataInicio, Bag);
+        autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, Bag)).
+autoMainMultiAux(_, _, _, []).
+autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, Bag) :-
+        mainAllSingleAux1(Bag, RapidoEcologico, Algoritmo, DataInicio, X), % [(Circuito/InfoCircuito/Custo/Veiculo/Prazo)|T]
+        getJustCircuitos(X, XC),
+        maxSizeList(XC, 0, MaiorCaminho),
+        filtroCaminho(Bag, MaiorCaminho, IdEncs, NotMatched),
+        mainMulti(RapidoEcologico, Algoritmo, DataInicio, IdEncs),
+        autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, NotMatched).
+
+filtroCaminho([], _, [], []).
+filtroCaminho([Id|T], Caminho, IdEncs, NotMached) :-
+        getIdMorada(Id, X), 
+        filtroCaminho(T, Caminho, IdX, NMX),
+        (member(X,Caminho)-> append(Id, IdX,IdEncs), NotMached=NMX;
+        IdEncs = IdX, append(Id, NMX, NotMached)).
+        
+
+getJustCircuitos([], []).
+getJustCircuitos([(C,_,_,_,_)|T], [C|X]) :- getJustCircuitos(T, X).
+
+maxSizeList([], _, _).
+maxSizeList([X|T], Acc, List) :- is_list(X), length(X, L), 
+                                        L>Acc -> maxSizeList(T, L, X);
+                                        maxSizeList(T, Acc, List).
+
+
 
 %------------------------------------------------------------------------------------%
 %---------------  VERIFICAR SE AS ENTREGAS SAO FEITAS DENTRO DO PRAZO ---------------%
@@ -670,7 +744,7 @@ checkDiasMes(Ano,Mes,R) :-
                         (Resto == 0, Mes > 7) -> R = 31;         
                         R = 30).
 
-criaCircuito(Caminho,IdEncs) :-
+atribuiCircuito(Caminho,IdEncs) :-
                 getPesoTotal(IdEncs,Peso),
                 getVolumeTotal(IdEncs,Volume),
                 evolucao(circuito(Caminho,IdEncs,Peso,Volume)).
@@ -689,62 +763,6 @@ iniciarEntrega(IdEstafeta, [IdEnc|T], Veiculo):-
         replace_existing_fact(encomenda(registada, IdEnc, C, P, V, M, P), 
                                 encomenda(distribuicao, IdEnc, C, P, V, M, P)),
         iniciarEntrega(IdEstafeta, T, Veiculo).
-
-
-/*
-getMoradasPeso([], []).
-getMoradasPeso([IdEnc|T], L) :- encomenda(registada, IdEnc, _, Peso, _, Morada1, _), 
-                                getMoradasPeso(T, L2), 
-                                append(Morada1/[IdEnc/Peso], L2, L).
-getMoradasPeso([_|T], X) :- getMoradasPeso(T, X).
-
-joinMoradas1([], _).
-joinMoradas1([Morada/Info| T], L) :- \+member((Morada/_), T), joinMoradas1(T, Y), append(Morada/Info, Y, L).
-joinMoradas1([Morada/Info| T], L) :- add1(Morada/Info, T, L). 
-
-joinMoradas1([Morada/Info| T], L) :- \+member((Morada/_), T), joinMoradas1(T, Y), append(Morada/Info, Y, L).
-joinMoradas1([Morada/Info| T], L) :- add1(Morada/Info, T, L). 
-
-add1(Morada/Info, [], [Morada/Info]).
-add1(Morada/Info1, [Morada/Info2|_], L) :- append(Info1, Info2, Info), [Info|L].
-add1(Morada/Info, [H|T], _) :- add1(Morada/Info, T, Y), append(H, Y).
-
-
-joinMoradas([] , L , L).
-joinMoradas([Morada/H|T], Acc, X) :- adicionaMorada(Morada/H, Acc,[],Res).
-                                     joinMoradas(T,Res,X).
-
-
-adicionaMorada(Morada/H, [], Acc, [Morada/H|Acc]).
-adicionaMorada(Morada/H1, [Morada/H2 | T], Acc, X) :- append(H1,H2,Res),
-                                                      append(Morada/Res, T ,R),
-                                                      append(R,Acc,X).
-adicionaMorada(H1 , [H2 | T], Acc,X) :- append(H2,Acc,Res),
-                                        adicionaMorada(H1,T,Res,X).
-                     
-moradaPertence(_, []) :- false.
-moradaPertence(Morada,[Morada/_ | T]).
-moradaPertence(Morada,[Morada1/_ | T]) :- moradaPertence(Morada,T). 
-
-separarVoltas(L, X) :- encomenda(registada, IdEnc, _, Peso, _, _, _), setof(L, L, Bag), separarVoltas(Bag, X, 0). % ta mal o setof
-separarVoltas([],L, _).
-separarVoltas([encomenda(registada, IdEnc, _, Peso, _, _, _)|T], [L1|L], TotUsed) :- 
-                (TotUsed+Peso > 100) -> separarVoltas(T, [L2|L], 0);
-                                        append(IdEnc,L2,L1), separarVoltas(T, [L2|L], TotUsed+Peso).
-
-% makeCircuito(IdEstafeta) :-
-        % findall(IdEnc, entrega(IdEnc, IdEstafeta, _, _, _, empty), Bag),
-        % getMoradasPeso(Bag, Bag1),
-        % joinMoradas(Bag1, Bag2),
-        % separarVoltas(Bag, RET),
-        % getPesoTotal(Bag, X).
-        % getVolumeTotal(Bag,X)
-        % ((X>100, darSplit, !); (X>20, veiculo é carro ); (X>5, veiculo é mota ); (X>=0, veiculo é bicicleta)),
-        % alterarEstadoParaEmDistribuicao,
-
-        % resolve_aestrela().
-*/
-
 
 
 % -------------------------------- ALGORITMO GERAL - 1 : A* | 2 : Gulosa | 3 : Prof | 4 : Larg | 5 : Prof Limitada
@@ -769,7 +787,7 @@ encontraCircuito([home,IdEnc|T1], Alg , FULL/Custo) :-
         append(Caminho, FTemp, FULL),
         Custo is C1+CustoTmp.
 
-encontraCircuito([IdEnc,IdEnc2|T1], Alg, FULL/Custo) :- % antes organixar pela estima,   ver peso etempo 
+encontraCircuito([IdEnc,IdEnc2|T1], Alg, FULL/Custo) :-
            getIdMorada(IdEnc,Orig),
            getIdMorada(IdEnc2,Dest),
            escolheAlgoritmo(Alg, Orig, Dest, Caminho/CustoTmp),
@@ -789,7 +807,7 @@ calculaTempo(Peso, Distancia, Veiculo, Time) :-
 
 
 
-%--------------------------------- A ESTRELA
+%--------------------------------- A*
 
 resolve_aestrela(Origem, Destino, Caminho/Custo) :-
         getEstima(Origem, Destino, EstimaD),
@@ -890,7 +908,7 @@ profPrimeiro(Nodo, Dest , Hist, [Prox|Caminho], C) :-
 % -------------------- PROFUNDIDATE LIMITADA
 
 resolve_limitada(Origem, Destino, Caminho/C) :-
-        barreira(Limite,1,2),
+        barreira(Limite,5,5),
         profLimitada(Origem,Destino,0,Limite,Caminho),
         getCusto(Caminho,C).
         
@@ -952,6 +970,43 @@ addEstima(Id, Points, [(IdDestino, Estima) |T]):-
         addEstima(Id, Points, T).
 
 
+%-------------------------------------------------------------------------
+%--------------------------- CIRCUITO COM MAIOR VOLUME/PESO --------------
+%-------------------------------------------------------------------------
+
+
+circuitoMaiorVolume(R):-
+        findall((C, V), circuito(C, _, _, V), Bag),
+        length(Bag, L),
+        (
+        L==0 -> write("Nenhum Circuito Encontrado"), !;
+        juntaCaminhoValor(Bag,[],Bag1),maxCirc(Bag1, 0, [], R)
+        ).
+                                        
+circuitoMaiorPeso(R):-
+        findall((C, P), circuito(C, _, P, _), Bag),
+        length(Bag, L),
+        (
+        L==0 -> write("Nenhum Circuito Encontrado"), !;
+        juntaCaminhoValor(Bag,[],Bag1),maxCirc(Bag1, 0, [], R)
+        ).
+                                        
+maxCirc([], P, C, C/P).
+maxCirc([(C,P)|T], Acc, Circuito, R):-  P> Acc -> maxCirc(T, P, [C], R);
+                                            P==Acc -> append([C],Circuito,Aux),maxCirc(T, P, Aux, R);
+                                            maxCirc(T, Acc, Circuito, R).
+
+juntaCaminhoValor([],Acc,Acc).
+juntaCaminhoValor([(C,V)|T], Acc, R) :- \+existeCaminho(C,Acc), juntaCaminhoValor(T,[(C,V)|Acc],R).
+juntaCaminhoValor([(C,V)|T], Acc, R) :- somaValor(C,V,Acc, Aux), juntaCaminhoValor(T,Aux,R).
+
+
+somaValor(C,V,[(C,V1)|T],R) :- Vaux is V + V1, R = [(C,Vaux)|T].
+somaValor(C,V,[H|T], R) :- somaValor(C,V,T,Aux), R = [H|Aux].  
+
+existeCaminho(_,[]) :- !,fail.
+existeCaminho(C,[(C,_)|_]).
+existeCaminho(C,[_|T]) :- existeCaminho(C,T).
 
 %-------------------------------------------------------------------------
 %--------------------------- INVARIANTES
