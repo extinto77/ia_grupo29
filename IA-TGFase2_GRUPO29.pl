@@ -513,20 +513,20 @@ ordenaPorEstima([IdEnc|T], Res, R) :-  Res = [H|_],
                                        apagar(Aux,[IdEnc|T],L),ordenaPorEstima(L,[Aux|Res],R).
 
 getMenorEstima(home, [] , R, R).
-getMenorEstima(home,[H|T], Acc, R) :- getIdMorada(H,Id),
+getMenorEstima(home,[H|T], Acc, Res) :- getIdMorada(H,Id),
                                       getEstima(x2,Id,R),
                                       getIdMorada(Acc, Id2), 
                                       getEstima(x2,Id2,R2),
-                                      R < R2, getMenorEstima(home,T,H,R);
-                                      getMenorEstima(home,T,Acc,R).
+                                      R < R2, getMenorEstima(home,T,H,Res);
+                                      getMenorEstima(home,T,Acc,Res).
 getMenorEstima(_,[],R,R).
-getMenorEstima(IdEnc, [H|T], Acc, R) :- getIdMorada(H,Id),
+getMenorEstima(IdEnc, [H|T], Acc, Res) :- getIdMorada(H,Id),
                                         getIdMorada(IdEnc,IdInicio),
                                         getEstima(IdInicio,Id,R),
                                         getIdMorada(Acc, Id2), 
                                         getEstima(IdInicio,Id2,R2),
-                                        R < R2, getMenorEstima(home,T,H,R);
-                                        getMenorEstima(IdEnc,T,Acc,R).
+                                        R < R2, getMenorEstima(home,T,H,Res);
+                                        getMenorEstima(IdEnc,T,Acc,Res).
 
 
 veiculosPossiveis([IdEnc|T], Veiculos) :-
@@ -569,7 +569,8 @@ caminhoTempoCerto([Id1,Id2|T1], Encomendas, Time, Veiculo, Tempos) :-
 
 
 criarCircuito(L, Algoritmo, Veiculo, Circuito/X/Custo):- 
-                encontraCircuito([home|L], Algoritmo, Circuito/Custo),
+                ordenaPorEstima(L,[],IdsOrdenados),
+                encontraCircuito(IdsOrdenados, Algoritmo, Circuito/Custo),
                 makeIdPesoEncomendas(L, L1),
                 caminhoTempoCerto(Circuito, L1, 0, Veiculo, X).
 
@@ -582,20 +583,20 @@ verificaAnterior([H|T], DataInicio, L):-
         verificaAnterior(T, DataInicio, L)
         ).
 
-verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncsA, Circuito/InfoCircuito/Custo/Veiculo/Prazo) :- %escolhe automatico o veiculo e cria rota
+verificaPrazos(RapidoEcologico,Algoritmo, DataInicio, IdEncsA, Circuito/InfoCircuito/Custo/Veiculo/Prazo) :-                     %escolhe automatico o veiculo e cria rota
         verificaAnterior(IdEncsA, DataInicio, IdEncs),
         veiculosPossiveis(IdEncs, Veiculos),
         length(Veiculos, Val),
         (
-        (Val==1) -> 
+        (Val==1) ->
                 criarCircuito(IdEncs, Algoritmo, carro, Circuito/InfoCircuito/Custo), Veiculo = carro;
         (Val==3 , RapidoEcologico==ecologico, criarCircuito(IdEncs, Algoritmo, bicicleta, Circuito1/InfoCircuito/Custo), 
-        checkPrazo(DataInicio, InfoCircuito, IdEncs)) -> 
+        checkPrazo(DataInicio, InfoCircuito, IdEncs)) ->
                 Circuito=Circuito1,Veiculo = bicicleta;
         criarCircuito(IdEncs, Algoritmo, mota, Circuito/InfoCircuito/Custo), Veiculo = mota
         ),
         (checkPrazo(DataInicio, InfoCircuito, IdEncs) -> Prazo = "Dentro de Prazo"; Prazo = "Fora de Prazo").
-        %),write(Circuito/InfoCircuito/Custo).
+        % write(Circuito/InfoCircuito/Custo).
 
 
 
@@ -603,15 +604,17 @@ mainSingle(RapidoEcologico, Algoritmo, DataInicio, IdEnc, X):-
         write(IdEnc), write(" : "),
         verificaPrazos(RapidoEcologico, Algoritmo, DataInicio, [IdEnc], X).
 
+
 mainAllSingle(RapidoEcologico, Algoritmo, DataInicio):- % entregar todas sozinhas
         findall(Id, encomenda(registada , Id , _ , _ , _ , _ , _), S),
         mainAllSingleAux(S, RapidoEcologico, Algoritmo, DataInicio).
 
-mainAllSingleAux1([],_, []).
-mainAllSingleAux1([Id|T],RapidoEcologico,Algoritmo,DataInicio, [X|X1]) :- 
-        mainSingle(RapidoEcologico, Algoritmo, DataInicio, Id, X), !,
-        mainAllSingleAux1(T,RapidoEcologico,Algoritmo,DataInicio, X1);
-        mainAllSingleAux1(T,RapidoEcologico,Algoritmo,DataInicio, X1).
+mainAllSingleAux2([],_,_,_, []).
+mainAllSingleAux2([Id|T],RapidoEcologico,Algoritmo,DataInicio, [X|X1]) :- 
+        verificaPrazos(RapidoEcologico, Algoritmo, DataInicio, [Id], X), !,
+        mainAllSingleAux2(T,RapidoEcologico,Algoritmo,DataInicio, X1);
+        mainAllSingleAux2(T,RapidoEcologico,Algoritmo,DataInicio, X1).
+
 mainAllSingleAux([],_). 
 mainAllSingleAux([Id|T],RapidoEcologico,Algoritmo,DataInicio) :- 
                         mainSingle(RapidoEcologico, Algoritmo, DataInicio, Id, X), !, escreveInfo(X),
@@ -624,9 +627,21 @@ escreveInfo(X/Y/Z/W/G) :- write("\n"), write("\tCaminho -> "),write(X), write("\
                         write("\tVeículo -> "), write(W), write("\n"),
                         write("\tEntregue "), write(G), write("\n").
 
+getSomaCustoTempo([], 0/0).
+getSomaCustoTempo([(_/InfoCircuito/Custo/_/_)|Tail], C+Custo/TAux+Tempo) :- 
+        getSomaCustoTempo(Tail, C/TAux),
+        last(InfoCircuito, (_, Tempo)).
+        
+
+compareSingleFull(IdEncs, RapidoEcologico,Algoritmo,DataInicio) :-
+        mainAllSingleAux2(IdEncs, RapidoEcologico,Algoritmo,DataInicio, XSingle),
+        getSomaCustoTempo(XSingle, Custo/Tempo),
+        write("Individualmente:\nSoma dos Custos: "), write(Custo), write("\nSoma dos Tempos: "), write(Tempo),       
+        mainMulti(RapidoEcologico,Algoritmo,DataInicio, IdEncs).      
 
 
 mainMulti(RapidoEcologico, Algoritmo, DataInicio, IdEncs):- % escolher que encomendas entregar
+        getPesoTotal(IdEncs,Peso), Peso > 100, write("Peso das Encomendas excedente.");
         verificaPrazos(RapidoEcologico, Algoritmo, DataInicio, IdEncs, X),
         write(IdEncs), write(" : "),escreveInfo(X).
 
@@ -636,9 +651,12 @@ autoMainMulti(RapidoEcologico, Algoritmo, DataInicio):-
         getPesoTotal(Bag, Peso),
         (Peso=<100-> mainMulti(RapidoEcologico, Algoritmo, DataInicio, Bag);
         autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, Bag)).
+
 autoMainMultiAux(_, _, _, []).
 autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, Bag) :-
-        mainAllSingleAux1(Bag, RapidoEcologico, Algoritmo, DataInicio, X), % [(Circuito/InfoCircuito/Custo/Veiculo/Prazo)|T]
+        mainAllSingleAux2(Bag, RapidoEcologico, Algoritmo, DataInicio, X), 
+        % X é do tipo [(Circuito/InfoCircuito/Custo/Veiculo/Prazo)|T]
+        write(X), %% problema aqui em baixo
         getJustCircuitos(X, XC),
         maxSizeList(XC, 0, MaiorCaminho),
         filtroCaminho(Bag, MaiorCaminho, IdEncs, NotMatched),
@@ -842,7 +860,7 @@ adjacente_distancia([Nodo|Caminho]/Custo/_, [ProxNodo,Nodo|Caminho]/NovoCusto/Es
 	getGrafo(Nodo, ProxNodo, PassoCustoDist),
 	\+ member(ProxNodo, Caminho),
 	NovoCusto is Custo + PassoCustoDist,
-	estima(ProxNodo, Destino, EstDist).
+	getEstima(ProxNodo, Destino, EstDist).
 
 % --------------------------------- GULOSA
 
@@ -938,38 +956,6 @@ getGrafo(Origem, Destino, Distancia):- grafo(Origem, Destino, Distancia).
 getGrafo(Origem, Destino, Distancia):- !, grafo(Destino, Origem, Distancia).
 
 
-
-
-/*adicionaEstrada(casteloes/rua_igreja, x13, 
-        [[(x1, 2), (x3, 4)], 
-        [(x1, 1), (x2, 2),(x3, 3),(x4, 4),(x5, 5),(x6, 6),
-                (x7, 8),(x9, 9),(x10, 10),(x11, 11),(x12, 12)]
-        ]).*/
-adicionaEstrada(Morada, Id, L) :-
-        localizacao(_, Morada), write("Morada já adicionada"), !;
-        localizacao(Id, _), write("Id já existente"), !;
-        setof(X1, grafo(X1, _, _), Set1),
-        setof(X2, grafo(_, X2, _), Set2),
-        append(Set1, Set2, Set),
-        sort(Set, SetR),
-        length(SetR, Size),
-        length(L, Size),
-        
-        assert(localizacao(Id, Morada)),
-        addGrafo(Id, L, SetR).
-
-addGrafo(_, []) :- write("Caminhos adicionados").
-addGrafo(Id, [[(Ligacao, Custo)], Estimas], Points):- 
-        assert(grafo(Id, Ligacao, Custo)),
-        addEstima(Id, Points, Estimas).
-
-addEstima(_, _, []):- write("Estimas adicionadas").
-addEstima(Id, Points, [(IdDestino, Estima) |T]):-
-        \+member(IdDestino, Points), write("Estima inválida"), !;
-        assert(estima(Id, IdDestino, Estima)),
-        addEstima(Id, Points, T).
-
-
 %-------------------------------------------------------------------------
 %--------------------------- CIRCUITO COM MAIOR VOLUME/PESO --------------
 %-------------------------------------------------------------------------
@@ -1012,6 +998,37 @@ existeCaminho(C,[_|T]) :- existeCaminho(C,T).
 %--------------------------- INVARIANTES
 %------------------------------------------------------------------------
 
+/*adicionaEstrada(casteloes/rua_igreja, x13,[[(x1, 2), (x3, 4)],[(x1, 1), (x2, 2),(x3, 3),(x4, 4),(x5, 5),(x6, 6),(x7, 7),(x8,8),(x9, 9),(x10, 10),(x11, 11),(x12, 12)]]).*/
+adicionaEstrada(Morada, Id, L) :-
+        localizacao(_, Morada), write("Morada já adicionada"), !;
+        localizacao(Id, _), write("Id já existente"), !;
+        findall(X1, grafo(X1, _, _), Set1),
+        findall(X2, grafo(_, X2, _), Set2),
+        append(Set1, Set2, Set),
+        sort(Set, SetR),
+        length(SetR, Size),
+        L = [Arestas,Estimas],
+        length(Estimas, Size),
+        checkPar(Arestas),
+        checkPar(Estimas),
+        assert(localizacao(Id, Morada)),
+        addGrafo(Id, L, SetR).
+
+
+checkPar([]).
+checkPar([(Id,V)|T]) :- localizacao(Id,_), V > 0, checkPar(T).
+
+addGrafo(Id,[[],Estimas],Points) :- addEstima(Id, Points, Estimas).
+addGrafo(Id, [[(Ligacao, Custo)|T], Estimas], Points):- 
+        assert(grafo(Id, Ligacao, Custo)),
+        addGrafo(Id,[T,Estimas],Points).
+
+
+addEstima(_, _, []).
+addEstima(Id, Points, [(IdDestino, Estima) |T]):-
+        assert(estima(Id, IdDestino, Estima)),
+        addEstima(Id, Points, T).
+
 +circuito(_,IdEncs,_,_) :: (findall( Ids ,
                                         (circuito(_,Ids,_,_),
                                         \+elementsInList(IdEncs,Ids)
@@ -1022,6 +1039,8 @@ existeCaminho(C,[_|T]) :- existeCaminho(C,T).
 elementsInList([],_).
 elementsInList([H|T],L) :- (member(H,L) -> !,fail);
                            elementsInList(T,L).
+
+
 
 evolucao( Termo ) :- findall(Invariante, +Termo::Invariante, Lista),
                      insercao(Termo),
