@@ -633,12 +633,17 @@ mainMulti(RapidoEcologico, Algoritmo, DataInicio, IdEncs):- % escolher que encom
 
 autoMainMulti(RapidoEcologico, Algoritmo, DataInicio):-
         findall(Ids, encomenda(registada , Ids, _ , _ , _ , _ , _), Bag),
-        autoMainMultiAux()
+        getPesoTotal(Bag, Peso),
+        (Peso=<100-> mainMulti(RapidoEcologico, Algoritmo, DataInicio, Bag);
+        autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, Bag)).
+autoMainMultiAux(_, _, _, []).
+autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, Bag) :-
         mainAllSingleAux1(Bag, RapidoEcologico, Algoritmo, DataInicio, X), % [(Circuito/InfoCircuito/Custo/Veiculo/Prazo)|T]
         getJustCircuitos(X, XC),
         maxSizeList(XC, 0, MaiorCaminho),
-        filtroCaminho(Ids, MaiorCaminho, IdEncs, NotMatched),
-        mainMulti(RapidoEcologico, Algoritmo, DataInicio, IdEncs).
+        filtroCaminho(Bag, MaiorCaminho, IdEncs, NotMatched),
+        mainMulti(RapidoEcologico, Algoritmo, DataInicio, IdEncs),
+        autoMainMultiAux(RapidoEcologico, Algoritmo, DataInicio, NotMatched).
 
 filtroCaminho([], _, [], []).
 filtroCaminho([Id|T], Caminho, IdEncs, NotMached) :-
