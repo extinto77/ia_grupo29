@@ -39,7 +39,7 @@ cliente(claudia, 2).
 estafeta(ups,        4, 3.5).
 estafeta(chronopost, 2, 4.7).
 estafeta(ctt,        4, 3.85).
-estafeta(amazon,     2, 3.16 ).
+estafeta(amazon,     2, 3.16).
 
 % ----------- encomenda(Estado, Id, IdClinet, Peso, Volume, Freguesia/Morada, prazo) /7
 
@@ -149,8 +149,6 @@ localizacao(x10, guimaraes/rua_ponte).
 localizacao(x11, guimaraes/rua_brito).
 localizacao(x12, guimaraes/avenida_brasil).
 
-goal(X) :- localizacao(X, green_distribution/casteloes).
-
 
 % --- ESTIMAS -----------------------
 estima(x1,  x1, 0).
@@ -246,7 +244,6 @@ estima(x12, x12, 0).
 
 %circuito(Caminho,Encomendas,Peso,Volume).
 circuito([x2,x4,x2], [luvas], 2, 10).
-circuito([x2,x4,x2], [cona], 2 ,10).
 circuito([x2,x1,x2], [fixe],  4 ,15).
 circuito([x2,x3,x2], [ola],  8 ,15).
 
