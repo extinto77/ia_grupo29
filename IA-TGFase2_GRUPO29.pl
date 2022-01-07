@@ -906,7 +906,7 @@ obtem_melhor_distancia_g([_|Caminhos], MelhorCaminho) :-
 	
 
 expande_agulosa_distancia_g(Caminho, ExpCaminhos,Destino) :-
-	findall(NovoCaminho, adjacente_distancia(Caminho,NovoCaminho, Destino), ExpCaminhos). % ver este destino
+	findall(NovoCaminho, adjacente_distancia(Caminho,NovoCaminho, Destino), ExpCaminhos).
 	
 
 
