@@ -244,8 +244,8 @@ estima(x12, x12, 0).
 
 %circuito(Caminho,Encomendas,Peso,Volume).
 circuito([x2,x4,x2], [luvas], 2, 10).
-circuito([x2,x1,x2], [fixe],  4 ,15).
-circuito([x2,x3,x2], [ola],  8 ,15).
+circuito([x2,x1,x2], [mola],  4 ,15).
+circuito([x2,x3,x2], [boneco],  8 ,15).
 
 drag(bicicleta, 0.7).
 drag(mota,      0.5).

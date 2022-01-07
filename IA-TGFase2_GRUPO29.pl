@@ -792,7 +792,7 @@ adicionaCircuito(Caminho,IdEncs) :-
 iniciarEntrega(_, [], _):-write("Informação Atualizada!").
 iniciarEntrega(IdEstafeta, [IdEnc|T], Veiculo):-
         replace_existing_fact(entrega(IdEnc, empty, empty, DI, DF, A), entrega(IdEnc, IdEstafeta, Veiculo, DI, DF, A)),
-        replace_existing_fact(encomenda(registada, IdEnc, C, P, V, M, P),encomenda(distribuicao, IdEnc, C, P, V, M, P)),
+        replace_existing_fact(encomenda(registada, IdEnc, C, Pe, V, M, P),encomenda(distribuicao, IdEnc, C, Pe, V, M, P)),
         iniciarEntrega(IdEstafeta, T, Veiculo).
 iniciarEntrega(IdEstafeta, [_|T], Veiculo) :- iniciarEntrega(IdEstafeta, T, Veiculo).
 
